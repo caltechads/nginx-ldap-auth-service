@@ -1,0 +1,5 @@
+# Documentation
+# ------------------------------------------------------------------------------
+Sphinx==6.2.0                                 # https://github.com/sphinx-doc/sphinx
+sphinxcontrib-images==0.9.4
+sphinx_rtd_theme==1.2.1

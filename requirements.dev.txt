@@ -1,0 +1,13 @@
+-e .
+-r doc/requirements.txt
+
+# Deployment
+# ------------------------------------------------------------------------------
+bumpversion==0.6.0                            # https://github.com/peritus/bumpversion
+
+# Development
+# ------------------------------------------------------------------------------
+flake8                                        # https://github.com/PyCQA/flake8
+pylint                                        # https://github.com/pylint-dev/pylint
+mypy                                          # https://github.com/python/mypy
+black                                         # https://github.com/psf/black

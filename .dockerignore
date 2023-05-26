@@ -1,0 +1,23 @@
+# Ignore any deveopment environment artifacts
+.git
+*.sw*
+.python-version
+.DS_Store
+.idea
+*.bak
+tags
+config.codekit3
+docker-compose*
+bitbucket-pipelines.yml
+buildspec.yml
+jmeter.log
+jmeter
+terraform
+.mypy_cache
+
+# Ignore the sql folder 
+sql/docker
+
+# Ignore any SQL dumps
+*.sql
+

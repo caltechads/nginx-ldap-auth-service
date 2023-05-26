@@ -1,0 +1,4 @@
+include *.txt
+include *.md
+graft etc
+include Makefile
