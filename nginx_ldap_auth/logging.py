@@ -1,8 +1,8 @@
 import logging
 import logging.config
 import os
-import re
-from typing import Any, Union, Type
+import sys
+from typing import Any
 from sentry_sdk import capture_exception
 import structlog  # type: ignore
 
@@ -78,63 +78,62 @@ LOGGING = {
     'version': 1,
     'disable_existing_loggers': True,
     'handlers': {
-        'json': {
+        'default': {
             'level': LOGLEVEL,
             'class': 'logging.StreamHandler',
-            'formatter': 'json'
+            'formatter': 'default'
         },
-        'null': {
-            'level': LOGLEVEL,
-            'class': 'logging.NullHandler',
+        'access': {
+            'class': 'logging.StreamHandler',
+            'formatter': 'access'
         },
     },
     'loggers': {
-        'aiohttp.access': {
-            'handlers': ['json'],
+        'uvicorn.error': {
+            'level': LOGLEVEL,
+            'handlers': ['default'],
             'propagate': False
         },
-        'aiohttp.server': {
-            'handlers': ['json']
+        'uvicorn.access': {
+            'level': LOGLEVEL,
+            'handlers': ['access'],
+            'propagate': False
         },
-        'aiohttp.internal': {
-            'handlers': ['json']
-        },
-        'aiohttp.web': {
-            'handlers': ['json']
-        },
-        'aiohttp.websocket': {
-            'handlers': ['json']
-        },
-        'aiohttp.client': {
-            'handlers': ['json']
-        }
     },
     'root': {
-        # Set up the root logger.  This will make all otherwise unconfigured loggers log through structlog
-        # processor.
-        'handlers': ['json'],
+        # Set up the root logger.  This will make all otherwise unconfigured
+        # loggers log through structlog processor.
+        'handlers': ['default'],
         'level': LOGLEVEL
     },
-    'formatters': {
-        # Set up a special formatter for our structlog output
-        'json': {
-            '()': structlog.stdlib.ProcessorFormatter,
-            'processor': structlog.processors.JSONRenderer(),
-            'foreign_pre_chain': pre_chain,
-            'format': '%(message)s'
+    "formatters": {
+        "default": {
+            "()": "uvicorn.logging.DefaultFormatter",
+            "format": "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
         },
+        "access": {
+            "()": "uvicorn.logging.AccessFormatter",
+            "format": "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+        }
     },
 }
 
 
-def global_exc_handler(loop, data):
-    logger.exception(
-        'Unhandled exception',
-        msg=data['message'],
-        exc_info=True,
-        exception=data['exception']
-    )
-    capture_exception(data['exception'])
-
-
 logging.config.dictConfig(LOGGING)
+
+
+def handle_exception(exc_type, exc_value, exc_traceback):
+    """
+    Log any uncaught exception instead of letting it be printed by Python
+    (but leave KeyboardInterrupt untouched to allow users to Ctrl+C to stop)
+    See https://stackoverflow.com/a/16993115/3641865
+    """
+    if issubclass(exc_type, KeyboardInterrupt):
+        sys.__excepthook__(exc_type, exc_value, exc_traceback)
+        return
+
+    logger.error(
+        "Uncaught exception", exc_info=(exc_type, exc_value, exc_traceback)
+    )
+
+sys.excepthook = handle_exception

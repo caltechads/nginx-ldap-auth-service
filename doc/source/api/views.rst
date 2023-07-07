@@ -7,4 +7,10 @@ Views
 
 .. autofunction:: force_authentication
 
+.. autofunction:: login
+
+.. autofunction:: login_handler
+
+.. autofunction:: logout
+
 .. autofunction:: index

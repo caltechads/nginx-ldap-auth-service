@@ -1,6 +1,9 @@
 from typing import Optional
-
-from pydantic import BaseSettings
+from pydantic_settings import BaseSettings, SettingsConfigDict
+try:
+    from typing import Literal
+except ImportError:
+    from typing_extensions import Literal
 
 
 class Settings(BaseSettings):
@@ -16,8 +19,20 @@ class Settings(BaseSettings):
     #: Declare this authentication realm to the user when asking them to
     #: authenticate
     auth_realm: str = 'Restricted'
+
+    # Session
     #: The name of the cookie to set when a user authenticates
     cookie_name: str = 'nginxauth'
+    #: The secret key to use for session cookies
+    secret_key: str = 'SESSION_SECRET'
+    #: The maximum age of a session cookie in seconds
+    session_max_age: int = 0
+    #: session type
+    session_backend: Literal['redis', 'memory'] = 'memory'
+    #: If using the Redis session backend, the URL to connect to Redis on
+    redis_url: str = 'redis://localhost'
+    #: If using the Redis session backend, the prefix to use for session keys
+    redis_prefix: str = "nginx_ldap_auth."
 
     # LDAP
     #: The URI to connect to LDAP on
@@ -32,9 +47,9 @@ class Settings(BaseSettings):
     ldap_password: Optional[str] = None
     #: The base DN to search for users under
     ldap_basedn: str = 'ou=users,dc=example,dc=com'
-    #: The base DN to search for users under
+    #: The attribute to use as the username when searching for a user
     ldap_username_attribute: str = 'uid'
-    #: The base DN to search for users under
+    #: The attribute to use as the full name when getting search results
     ldap_full_name_attribute: str = 'cn'
     #: The LDAP search filter to use when searching for a user
     ldap_filter: str = '{username_attribute}={username}'
@@ -55,25 +70,4 @@ class Settings(BaseSettings):
     # Sentry
     sentry_url: Optional[str] = None
 
-    class Config:
-        fields = {
-            'debug': {'env': 'DEBUG'},
-            'hostname': {'env': 'HOSTNAME'},
-            'port': {'env': 'PORT'},
-            'auth_realm': {'env': 'AUTH_REALM'},
-            'cookie_name': {'env': 'COOKIE_NAME'},
-            'ldap_uri': {'env': 'LDAP_URI'},
-            'ldap_starttls': {'env': 'LDAP_STARTTLS'},
-            'ldap_disable_referrals': {'env': 'LDAP_DISABLE_REFERRALS'},
-            'ldap_binddn': {'env': 'LDAP_BINDDN'},
-            'ldap_password': {'env': 'LDAP_PASSWORD'},
-            'ldap_timeout': {'env': 'LDAP_TIMEOUT'},
-            'ldap_min_pool_size': {'env': 'LDAP_MIN_POOL_SIZE'},
-            'ldap_max_pool_size': {'env': 'LDAP_MAX_POOL_SIZE'},
-            'ldap_pool_connection_lifetime_seconds': {'env': 'LDAP_POOL_CONNECTION_LIFETIME_SECONDS'},
-            'ldap_filter': {'env': 'LDAP_FILTER'},
-            'statsd_host': {'env': 'STATSD_HOST'},
-            'statsd_port': {'env': 'STATSD_PORT'},
-            'statsd_prefix': {'env': 'STATSD_PREFIX'},
-            'sentry_url': {'env': 'SENTRY_URL'},
-        }
+    model_config = SettingsConfigDict()

@@ -22,6 +22,9 @@ threads: int = 1
 
 reload: bool = env.bool('GUNICORN_RELOAD', default=False)
 
+keyfile: str = '/certs/localhost.key'
+certfile: str = '/certs/localhost.crt'
+
 # Logging.
 accesslog: str = '-'
 errorlog: str = '-'
@@ -43,6 +46,7 @@ access_log_format: str = json.dumps(
         'http_user_agent': r'%(a)s'
     }
 )
+loglevel: str = env.str('LOG_LEVEL', default='INFO')
 
 _host: Optional[str] = env('STATSD_HOST', default=None)
 _port: int = env.int('STATSD_PORT', default=8125)

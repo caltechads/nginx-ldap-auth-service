@@ -9,12 +9,19 @@ services:
     volumes:
       - ./etc/nginx/nginx.conf:/etc/nginx/nginx.conf
       - ./etc/nginx/certs:/certs
-#    links:
-#      - fastapi_nginx_ldap_auth
+    depends_on:
+      - nginx_ldap_auth_service
+    links:
+      - nginx_ldap_auth_service
 
-#  nginx_ldap_auth_service:
-#    image: nginx-ldap-auth-service:latest
-#    container_name: nginx-ldap-auth-service
-#    volumes:
-#      - .:/app
+  nginx_ldap_auth_service:
+    image: nginx-ldap-auth-service:latest
+    hostname: auth-service
+    ports:
+      - "8888:8888"
+    env_file:
+      - .env
+    container_name: nginx-ldap-auth-service
+    volumes:
+      - .:/app
 

@@ -14,12 +14,12 @@ from bonsai.errors import (  # type: ignore
     AuthenticationError,
 )
 from bonsai.utils import escape_filter_exp  # type: ignore
-from pydantic import BaseModel, PrivateAttr  # pylint: disable=no-name-in-module
+from pydantic import BaseModel  # pylint: disable=no-name-in-module
 
 from nginx_ldap_auth.ldap import TimeLimitedAIOLDAPConnection, TimeLimitedAIOConnectionPool
 from nginx_ldap_auth.logging import logger
 from nginx_ldap_auth.settings import Settings
-from nginx_ldap_auth.typing import LDAPObject
+from nginx_ldap_auth.types import LDAPObject
 
 
 class UserManager:

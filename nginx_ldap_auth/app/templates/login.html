@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en" class="no-js">
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  {# As of June 2018, this is the most up-to-date "responsive design" viewport tag. #}
+  <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+  <title>
+    {{ site_title|default('Restricted', true) }} | Login
+  </title>
+
+  <link rel="apple-touch-icon" sizes="180x180" href="{{ url_for('static', path='apple-touch-icon.png') }}">
+  <link rel="icon" type="image/png" sizes="32x32" href="{{ url_for('static', path='favicon-32x32.png') }}">
+  <link rel="icon" type="image/png" sizes="16x16" href="{{ url_for('static', path='favicon-16x16.png') }}">
+  <link rel="shortcut icon" href="{{ url_for('static', path='favicon.ico') }}">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-EVSTQN3/azprG1Anm3QDgpJLIm9Nao0Yz1ztcQTwFspd3yD65VohhpuuCOmLASjC" crossorigin="anonymous">
+  <style>
+    .divider:after,
+    .divider:before {
+        content: "";
+        flex: 1;
+        height: 1px;
+        background: #eee;
+    }
+    .h-custom {
+        height: calc(100% - 73px);
+    }
+    @media (max-width: 450px) {
+        .h-custom {
+            height: 100%;
+        }
+    }
+    </style>
+</head>
+
+<body class="vh-100">
+    <section class="vh-100">
+        <div class="container-fluid h-custom">
+        <div class="row d-flex justify-content-center align-items-center h-100">
+            <div class="col-md-8 col-lg-6 col-xl-4 border p-3">
+                <h1 class="mb-5">{{ site_title }}</h1>
+                {% if errors %}
+                    {% for error in errors %}
+                    <div class="alert alert-danger mb-3" role="alert">{{ error }}</div>
+                    {% endfor %}
+                {% endif %}
+                <form method="post" action="/auth/login">
+                    <input type="hidden" name="service" value="{{ service }}">
+                    <div class="form-outline mb-4">
+                        <input class="form-control form-control-lg" type="text" name="username" id="username" placeholder="Username" required="true" autofocus="true" autocomplete="username" autocapitalize="none" autocorrect="off" spellcheck="false" value="{{ username }}">
+                    </div>
+                    <div class="form-outline mb-3">
+                        <input class="form-control form-control-lg" type="password" name="password" id="password" placeholder="Password" required="true" autocomplete="current-password" autocapitalize="none" autocorrect="off" spellcheck="false">
+                    </div>
+                    <div class="text-center text-lg-start mt-4 pt-2">
+                        <input type="submit" class="btn btn-primary btn-lg" value="Login">
+                    </div>
+                </form>
+            </div>
+        </div>
+        </div>
+        <div class="d-flex flex-column flex-md-row text-center text-md-start justify-content-between py-4 px-4 px-xl-5 bg-primary">
+        <!-- Right -->
+        </div>
+    </section>
+</body>
+</html>

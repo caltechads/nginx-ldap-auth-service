@@ -1,0 +1,12 @@
+#COOKIE_NAME=nginxauth
+#SESSION_MAX_AGE=0
+#SESSION_BACKEND=memory
+
+#REDIS_URL=redis://localhost
+#REDIS_PREFIX=nginx_ldap_auth.
+
+SECRET_KEY=__SECRET_KEY__
+LDAP_URI=ldap://host.docker.internal:1389
+LDAP_BINDDN=__LDAP_BINDDN__
+LDAP_PASSWORD=__LDAP_PASSWORD__
+LDAP_BASEDN=ou=users,dc=example,dc=com
