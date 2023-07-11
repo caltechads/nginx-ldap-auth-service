@@ -2,7 +2,7 @@ VERSION = 2.0.2
 
 PACKAGE = nginx-ldap-auth-service
 
-DOCKER_REGISTRY = 131067624433.dkr.ecr.us-west-2.amazonaws.com/caltech-imss-ads
+DOCKER_REGISTRY = caltechads
 #======================================================================
 
 
