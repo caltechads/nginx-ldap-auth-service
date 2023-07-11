@@ -7,7 +7,7 @@ with open("README.md", "r", encoding='utf-8') as fh:
 
 setup(
     name="nginx-ldap-auth-service",
-    version="2.0.0",
+    version="2.0.1",
     description="A FastAPI app that authenticates users via LDAP and sets a cookie for nginx",
     author="Caltech IMSS ADS",
     author_email="imss-ads-staff@caltech.edu",
@@ -17,7 +17,7 @@ setup(
         "aiodogstatsd==0.16.0.post0",
         "fastapi>=0.95.0",
         "uvicorn[standard]==0.21.1",
-        "gunicorn==22.0.0",
+        "gunicorn==22.0.1",
         "bonsai==1.5.1",
         "pydantic-settings",
         "pydantic>=1.9.0",
