@@ -1,0 +1,288 @@
+.. _configuration:
+
+Configuration Overview
+======================
+
+.. important::
+    This page deals with configuring ``nginx-ldap-auth-service``.  For
+    configuring ``nginx`` to use ``nginx-ldap-auth-service``, see :doc:`nginx`.
+
+``nginx-ldap-auth-service`` reads configuration from three places, in
+decreasing order of precedence:
+
+#. Command line options for ``nginx-ldap-auth start``
+#. headers set in the location blocks of the ``nginx`` config file
+#. the environment
+
+Not all configuration options are available in all places.
+
+.. note::
+
+    To print your resolved configuration when using the command line,
+    you can run the following command::
+
+        $ nginx-ldap-auth settings
+
+Command Line
+------------
+
+If an option is specified on the command line, it overrides all other values
+that may have been specified in the app specific environment variables.
+configuration file. Not all ``nginx-ldap-auth-service`` settings are available
+to be set from the command line. To see the full list of command line settings
+you can do the usual::
+
+    $ nginx-ldap-auth start --help
+
+.. _nginx_header_config:
+
+nginx Header Configuration
+--------------------------
+
+If an option is specified in the ``nginx`` configuration file, it overrides the
+associated setting in ``nginx-ldap-auth-service``.
+
+You can set the following headers in your nginx configuration to configure
+``nginx-ldap-auth-service`` on a per ``nginx`` server basis.  You might do this
+if you have multiple ``nginx`` servers all using the same
+``nginx-ldap-auth-service`` instance, but want to configure them differently.
+
+.. note::
+
+    You can only set the following headers in the ``location`` blocks that
+    proxy to ``nginx-ldap-auth-service``.  If you set them in the ``server``
+    block, they will be ignored.
+
+X-Auth-Realm
+
+    The title for the login form.  This goes in the ``location`` block for the
+    ``/auth`` location. Defaults to the value of
+    :py:attr:`nginx_ldap_auth.settings.Settings.auth_realm` for the
+    ``nginx-ldap-auth-service`` instance.
+
+    Example:
+
+    .. code-block:: nginx
+        :emphasize-lines: 3
+
+        location /auth {
+            proxy_pass http://nginx-ldap-auth-service:8888/auth;
+            proxy_set_header X-Auth-Realm "My Login Form";
+        }
+
+X-Cookie-Name
+
+    The name of the session cookie.  This goes in the ``location`` block for the
+    ``/auth`` and ``/check-auth`` locations. Defaults to the value of
+    :py:attr:`nginx_ldap_auth.settings.Settings.cookie_name` for the
+    ``nginx-ldap-auth-service`` instance.
+
+    Changing the cookie name with ``X-Cookie-Name`` implies some other ``nginx``
+    configuration changes also, so all the highlighted lines below are things you
+    need to change if you change the cookie name.
+
+    Example:
+
+    .. code-block:: nginx
+        :emphasize-lines: 3,18,19,20
+
+        location /auth {
+            proxy_pass http://nginx-ldap-auth-service:8888/auth;
+            proxy_set_header X-Cookie-Name "mycookie";
+
+            # other lines omitted for brevity
+        }
+
+        location /check-auth {
+            proxy_pass http://nginx-ldap-auth-service:8888/check;
+
+            # Cache our auth responses for 10 minutes so that we're not
+            # hitting the auth service on every request.
+            proxy_cache auth_cache;
+            proxy_cache_valid 200 10m;
+
+            # other lines omitted for brevity
+
+            proxy_set_header X-Cookie-Name "mycookie";
+            proxy_set_header Cookie mycookie=$cookie_mycookie;
+            proxy_cache_key "$http_authorization$cookie_mycookie";
+        }
+
+    If you're not doing any caching, you can ignore the cache related lines
+    above.
+
+X-Cookie-Domain
+
+    The domain for the session cookie.  This goes in the ``location`` block for
+    the ``/auth`` and ``/check-auth`` locations. Defaults to the value of
+    :py:attr:`nginx_ldap_auth.settings.Settings.cookie_domain` for the
+    ``nginx-ldap-auth-service`` instance.
+
+    Example:
+
+    .. code-block:: nginx
+        :emphasize-lines: 3,13
+
+        location /auth {
+            proxy_pass http://nginx-ldap-auth-service:8888/auth;
+            proxy_set_header X-Cookie-Domain ".example.com";
+
+            # other lines omitted for brevity
+        }
+
+        location /check-auth {
+            proxy_pass http://nginx-ldap-auth-service:8888/check;
+
+            # other lines omitted for brevity
+
+            proxy_set_header X-Cookie-Domain ".example.com";
+        }
+
+.. _nginx-ldap-auth-service-env:
+
+Environment
+-----------
+
+You can either export the appropriate variables directly into your shell
+environment, or you can use an environment file and specify it with the
+``--env-file`` option to ``nginx-ldap-auth start``.
+
+The following environment variables are available to configure
+``nginx-ldap-auth-service``:
+
+Web Server
+^^^^^^^^^^
+
+These settings configure the web server that ``nginx-ldap-auth-service`` runs,
+``uvicorn``.
+
+.. envvar:: HOSTNAME
+
+    The hostname to listen on. Defaults to ``0.0.0.0``.
+
+.. envvar:: PORT
+
+    The port to listen on. Defaults to ``8888``.
+
+.. envvar:: SSL_KEYFILE
+
+    The path to the SSL key file. Defaults to ``/certs/server.key``.
+
+.. envvar:: SSL_CERTFILE
+
+    The path to the SSL certificate file. Defaults to ``/certs/server.crt``.
+
+.. envvar:: WORKERS
+
+    The number of worker processes to spawn. Defaults to ``1``.
+
+.. envvar:: DEBUG
+
+    Set to ``1`` or ``True`` to enable debug mode. Defaults to ``False``.
+
+
+Login form and sessions
+^^^^^^^^^^^^^^^^^^^^^^^
+
+These settings configure the login form and session handling.
+
+.. envvar:: AUTH_REALM
+
+    The title for the login form. Defaults to ``Login``.
+
+.. envvar:: COOKIE_NAME
+
+    The name of the cookie to use for the session. Defaults to ``nginxauth``.
+
+.. envvar:: COOKIE_DOMAIN
+
+    The domain for the cookie to use for the session. Defaults to no domain.
+
+.. envvar:: SECRET_KEY
+
+    The secret key to use for the session. Defaults to ``SESSION_SECRET``.
+
+.. envvar:: SESSION_BACKEND
+
+    The session backend to use. Defaults to ``memory``.  Valid options are
+    ``memory`` and ``redis``.  If you choose ``redis``, you must also set
+    :envvar:`REDIS_URL` and possibly :envvar:`REDIS_PORT`.
+
+.. envvar:: REDIS_URL
+
+    The URL to the Redis server. Defaults to ``redis://localhost``.
+
+.. envvar:: REDIS_PREFIX
+
+    The prefix to use for Redis keys. Defaults to ``nginx_ldap_auth``.
+
+
+LDAP
+^^^^
+
+These settings configure the LDAP server to use for authentication.
+
+.. envvar:: LDAP_URI
+
+    **Required**. The URL to the LDAP server. Defaults to ``ldap://localhost``.
+
+.. envvar:: LDAP_BINDDN
+
+    **Required**. The DN to use to bind to the LDAP server for doing our user
+    and authorization searches.
+
+.. envvar:: LDAP_PASSWORD
+
+    **Required**. The password to use to with :envvar:`LDAP_BINDDN` to bind to
+    the LDAP server for doing our user and authorization searches.
+
+.. envvar:: LDAP_STARTTLS
+
+    Set to ``1`` or ``True`` to enable STARTTLS on our LDAP connections. Defaults to ``False``.
+
+.. envvar:: LDAP_DISABLE_REFERRALS
+
+    Set to ``1`` or ``True`` to disable LDAP referrals. Defaults to ``False``.
+
+.. envvar:: LDAP_BASEDN
+
+    The base DN to use for our LDAP searches. Defaults to ``ou=users,dc=example,dc=com``.
+
+.. envvar:: LDAP_USERNAME_ATTRIBUTE
+
+    The LDAP attribute to use for the username. Defaults to ``uid``.
+
+.. envvar:: LDAP_FULL_NAME_ATTRIBUTE
+
+    The LDAP attribute to use for the full name. Defaults to ``cn``.
+
+.. envvar:: LDAP_GET_USER_FILTER
+
+    The LDAP search filter to use when searching for users. Defaults to
+    ``(&(objectClass=person)(uid={username}))``.
+
+.. envvar:: LDAP_AUTHORIZATION_FILTER
+
+    The LDAP search filter to use when determining if a user is authorized to login.
+    for authorizations. Defaults to no filter, meaning all users are authorized if
+    they exist in LDAP.
+
+.. envvar:: LDAP_TIMEOUT
+
+    The maximum number of seconds to wait when acquiring a connection to the LDAP
+    server. Defaults to ``15``.
+
+.. envvar:: LDAP_MIN_POOL_SIZE
+
+    The minimum number of connections to keep in the LDAP connection pool. Defaults
+    to ``1``.
+
+.. envvar:: LDAP_MAX_POOL_SIZE
+
+    The maximum number of connections to keep in the LDAP connection pool. Defaults
+    to ``30``.
+
+.. envvar:: LDAP_POOL_CONNECTION_LIFETIME_SECONDS
+
+    The maximum number of seconds to keep a connection in the LDAP connection pool.
+    Defaults to ``20``.

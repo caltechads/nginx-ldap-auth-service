@@ -35,13 +35,12 @@ RUN pip install -e . && \
     mkdir /certs && \
     openssl req -x509 -nodes -days 3650 \
       -subj  "/C=US/ST=CA/O=Caltech/CN=localhost.localdomain" \
-      -newkey rsa:2048 -keyout /certs/localhost.key \
-      -out /certs/localhost.crt && \
+      -newkey rsa:2048 -keyout /certs/server.key \
+      -out /certs/server.crt && \
     chown -R sidecar /certs/*
 
 USER sidecar
 
 EXPOSE 8888
-#CMD ["gunicorn", "--ssl-version", "2", "--config", "/app/nginx_ldap_auth/gunicorn_config.py", "nginx_ldap_auth.app.main:app"]
-#CMD ["python", "/app/nginx_ldap_auth/server.py"]
-CMD ["uvicorn", "--ssl-keyfile", "/certs/localhost.key", "--ssl-certfile", "/certs/localhost.crt", "--host", "0.0.0.0", "--port", "8888", "nginx_ldap_auth.app.main:app"]
+
+CMD ["nginx-ldap-auth", "start"]

@@ -12,6 +12,17 @@ from .settings import Settings
 
 
 class TimeLimitedAIOLDAPConnection(AIOLDAPConnection):
+    """
+    A time-limited LDAP connection.  This allows us to have a connection pool
+    that will close connections after a certain amount of time.
+
+    Args:
+        client: The LDAP client.
+
+    Keyword Args:
+        expires: The number of seconds after which the connection will expire.
+        loop: The asyncio event loop.
+    """
 
     def __init__(
         self,
@@ -29,6 +40,20 @@ class TimeLimitedAIOLDAPConnection(AIOLDAPConnection):
 
 
 class TimeLimitedAIOConnectionPool(AIOConnectionPool):
+    """
+    A pool of time-limited LDAP connections.  This allows us to have relatively
+    fresh connections to our LDAP server while not having to create a new
+    connection for every request.
+
+    Args:
+        settings: The application settings.
+        client: The LDAP client.
+
+    Keyword Args:
+        minconn: The minimum number of connections to keep in the pool.
+        maxconn: The maximum number of connections to keep in the pool.
+        loop: The asyncio event loop.
+    """
 
     def __init__(
         self,
@@ -43,6 +68,17 @@ class TimeLimitedAIOConnectionPool(AIOConnectionPool):
         self.settings = settings
 
     async def get(self) -> AIOLDAPConnection:
+        """
+        Get a connection from the pool.  If a connection has expired, close it
+        and create a new connection, then return the new connection.
+
+        Raises:
+            ClosedPool: The pool has not been initialized.
+            EmptyPool: There are no connections in the pool.
+
+        Returns:
+            A connection from the pool.
+        """
         async with self._lock:
             if self._closed:
                 raise ClosedPool("The pool is closed.")

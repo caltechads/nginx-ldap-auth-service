@@ -3,7 +3,7 @@ from typing import Optional
 
 from fastapi import Request
 
-from ..logging import logger
+from ..logging import get_logger
 from ..settings import Settings
 from .models import User
 
@@ -34,51 +34,51 @@ class LoginForm:
 
     async def is_valid(self) -> bool:
         """
-        If the form username and password are valid, return ``True``.
-        Otherwise, return ``False``.
+        Return whether the form is valid.
 
-        To be valid, the username must not be empty, and a user with the
-        provided username must exist in the LDAP directory. The password must
-        not be empty, and the password must be valid for the user in the LDAP
-        directory.
+        * the form must have a non-empty username and password
+        * the user must exist in LDAP and must pass the authorization test,
+          meaning that the user must be in the results of the ldap search
+          named by :py:attr:`nginx_ldap_auth.settings.Settings.ldap_filter`
+        * the bind to LDAP must be successful
+
+        If all those tests pass, return ``True``.  Otherwise, return ``False``.
 
         Returns:
             ``True`` if the form is valid, ``False`` otherwise.
         """
+        _logger = get_logger(self.request)
         if not self.username:
-            logger.info("auth.failed.username")
+            _logger.info("auth.failed.username")
             self.errors.append("Username is required")
         if not self.password:
-            logger.info("auth.failed.no_password")
+            _logger.info("auth.failed.no_password")
             self.errors.append("A valid password is required")
         if user := await User.objects.get(cast(str, self.username)):
             # The user exists in LDAP
             user = cast(User, user)
             if await user.authenticate(cast(str, self.password)):
                 # The user has provided valid credentials
-                logger.info(
+                _logger.info(
                     "auth.success",
                     username=self.username,
                     full_name=user.full_name,
                     ldap_url=settings.ldap_uri,
                     target=self.service,
-                    realm=self.site_title
                 )
             else:
                 self.errors.append("Invalid username or password.")
-                logger.info(
+                _logger.info(
                     "auth.failed.invalid_credentials",
                     username=self.username,
                     target=self.service,
-                    realm=self.site_title
                 )
         else:
             self.errors.append("Invalid username or password.")
-            logger.warning(
+            _logger.warning(
                 "auth.failed.no_such_user",
                 username=self.username,
                 target=self.service,
-                realm=self.site_title
             )
         if not self.errors:
             return True

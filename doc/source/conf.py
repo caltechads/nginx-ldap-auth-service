@@ -17,6 +17,11 @@ sys.path.insert(0, os.path.abspath('../..'))
 from typing import List, Dict, Tuple, Optional
 import sphinx_rtd_theme  # pylint: disable=unused-import  # noqa:F401
 
+# These are required for sphinx-apidoc to work
+os.environ['LDAP_URI'] = 'ldap://ldap.example.com'
+os.environ['LDAP_BINDDN'] = 'cn=admin,dc=example,dc=com'
+os.environ['LDAP_PASSWORD'] = 'password'
+
 # -- Project information -----------------------------------------------------
 
 # the master toctree document
@@ -42,6 +47,7 @@ extensions: List[str] = [
     'sphinx.ext.viewcode',
     'sphinx.ext.intersphinx',
     'sphinx_rtd_theme',
+    'sphinxcontrib.httpdomain',
 ]
 
 source_suffix: str = ".rst"

@@ -47,7 +47,7 @@ class UserManager:
         client.set_cert_policy('never')
         client.set_ca_cert(None)
         client.set_ca_cert_dir(None)
-        client.set_async_connection_class(TimeLimitedAIOLDAPConnection)
+        client.set_async_connection_class(TimeLimitedAIOLDAPConnection)  # type: ignore
         return client
 
     async def create_pool(self) -> None:
@@ -111,7 +111,7 @@ class UserManager:
             username: the username to check
 
         Raises:
-            LDAPError: if an error occurs while communicating with the LDAP server
+            LDAPError: if an error occurred while communicating with the LDAP server
             AuthenticationError: if the LDAP server rejects the credentials of
                 :py:class:`nginx_ldap_auth.settings.Settings.ldap_binddn` and
                 :py:class:`nginx_ldap_auth.settings.Settings.ldap_password`
@@ -122,21 +122,73 @@ class UserManager:
         """
         return await self.get(username) is not None
 
+    async def is_authorized(self, username: str) -> bool:
+        """
+        Test whether the user is authorized to log in.  This is done by
+        performing an LDAP search using the filter specified in
+        :py:class:`nginx_ldap_auth.settings.Settings.ldap_authorization_filter`.
+        If that setting is ``None``, the user is considered authorized.
+
+        Args:
+            username: the username to check
+
+        Raises:
+            LDAPError: if an error occurred while communicating with the LDAP server
+            AuthenticationError: if the LDAP server rejects the credentials of
+                :py:class:`nginx_ldap_auth.settings.Settings.ldap_binddn` and :py:class:`nginx_ldap_auth.settings.Settings.ldap_password`
+
+        Returns:
+            ``True`` if the user is authorized to log in, ``False`` otherwise.
+        """
+        if not self.pool:
+            await self.create_pool()
+        pool = cast(TimeLimitedAIOConnectionPool, self.pool)
+        if self.settings.ldap_authorization_filter is None:
+            return True
+        try:
+            async with pool.spawn() as conn:
+                results = await conn.search(
+                    base=self.settings.ldap_basedn,
+                    scope=bonsai.LDAPSearchScope.SUBTREE,
+                    filter_exp=self.settings.ldap_authorization_filter.format(
+                        username_attribute=self.settings.ldap_username_attribute,
+                        fullname_attribute=self.settings.ldap_full_name_attribute,
+                        username=escape_filter_exp(username)
+                    ),
+                    attrlist=[self.settings.ldap_username_attribute]
+                )
+        except AuthenticationError:
+            logger.error(
+                'ldap.is_authorized.error.invalid_credentials',
+                bind_dn=self.settings.ldap_binddn
+            )
+            raise
+        except LDAPError:
+            logger.exception(
+                'ldap.is_authorized.exception',
+                bind_dn=self.settings.ldap_binddn,
+                username=username
+            )
+            raise
+        return len(results) > 0
+
     async def get(self, username: str) -> Optional["User"]:
         """
-        Get a user from the LDAP directory, and return it as a :py:class:`User`
+        Get a user from the LDAP directory, and return it as a :py:class:`User`.
+        When getting the user, we will use the LDAP search filter specified in
+        :py:class:`nginx_ldap_auth.settings.Settings.ldap_get_user_filter`.
 
         Args:
             username: the username for which to get user information
 
         Raises:
-            LDAPError: if an error occurs while communicating with the LDAP server
+            LDAPError: if an error occurred while communicating with the LDAP server
             AuthenticationError: if the LDAP server rejects the credentials of
                 :py:class:`nginx_ldap_auth.settings.Settings.ldap_binddn` and :py:class:`nginx_ldap_auth.settings.Settings.ldap_password`
 
         Returns:
             The user information as a :py:class:`User` instance, or ``None`` if
-            the user does not exist in the LDAP directory
+            the user is not returned by the LDAP search filter
         """
         if not self.pool:
             await self.create_pool()
@@ -146,7 +198,7 @@ class UserManager:
                 results = await conn.search(
                     base=self.settings.ldap_basedn,
                     scope=bonsai.LDAPSearchScope.SUBTREE,
-                    filter_exp=self.settings.ldap_filter.format(
+                    filter_exp=self.settings.ldap_get_user_filter.format(
                         username_attribute=self.settings.ldap_username_attribute,
                         fullname_attribute=self.settings.ldap_full_name_attribute,
                         username=escape_filter_exp(username)

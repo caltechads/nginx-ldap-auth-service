@@ -2,15 +2,38 @@ import logging
 import logging.config
 import os
 import sys
-from typing import Any
+from typing import Any, Optional, cast
+
+from fastapi import Request
 from sentry_sdk import capture_exception
 import structlog  # type: ignore
 
+from nginx_ldap_auth.settings import Settings
+
+settings = Settings()
 logger = structlog.get_logger('nginx_ldap_auth')
 
 
-DEVELOPMENT: bool = os.environ.get('DEVELOPMENT', 'False') == 'True'
-LOGLEVEL: str = os.environ.get('LOGLEVEL', 'INFO')
+def get_logger(request: Optional[Request] = None) -> structlog.BoundLogger:
+    """
+    Return a structlog logger.  If a request is passed, bind the following
+    values to the logger:
+
+    * The name of the authentication realm (the title of the login window)
+    * The host name of the server that asked us to authenticate/authorize
+    * The IP address of the client that wants to authenticate/authorize
+
+    Args:
+        request: The request object
+    """
+    if request is None:
+        return logger
+    request = cast(Request, request)
+    return logger.bind(
+        realm=request.headers.get("x-auth-realm", settings.auth_realm),
+        host=request.headers.get("host", "unknown"),
+        remote_ip=request.headers.get('x-forwarded-for', request.client.host).split(',')[0],
+    )
 
 
 class ContextLoggingProcessor:
@@ -79,7 +102,7 @@ LOGGING = {
     'disable_existing_loggers': True,
     'handlers': {
         'default': {
-            'level': LOGLEVEL,
+            'level': settings.loglevel,
             'class': 'logging.StreamHandler',
             'formatter': 'default'
         },
@@ -90,12 +113,12 @@ LOGGING = {
     },
     'loggers': {
         'uvicorn.error': {
-            'level': LOGLEVEL,
+            'level': settings.loglevel,
             'handlers': ['default'],
             'propagate': False
         },
         'uvicorn.access': {
-            'level': LOGLEVEL,
+            'level': settings.loglevel,
             'handlers': ['access'],
             'propagate': False
         },
@@ -104,19 +127,25 @@ LOGGING = {
         # Set up the root logger.  This will make all otherwise unconfigured
         # loggers log through structlog processor.
         'handlers': ['default'],
-        'level': LOGLEVEL
+        'level': settings.loglevel
     },
     "formatters": {
         "default": {
-            "()": "uvicorn.logging.DefaultFormatter",
-            "format": "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+            "()": structlog.stdlib.ProcessorFormatter,
+            'processor': structlog.processors.JSONRenderer(),
+            'foreign_pre_chain': pre_chain,
+            "format": "%(message)s"
         },
         "access": {
             "()": "uvicorn.logging.AccessFormatter",
-            "format": "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+            "format": "%(asctime)s %(message)s"
         }
     },
 }
+
+
+if settings.log_type == 'text':
+    LOGGING['formatters']['default']['processor'] = structlog.dev.ConsoleRenderer()  # type: ignore
 
 
 logging.config.dictConfig(LOGGING)
@@ -135,5 +164,6 @@ def handle_exception(exc_type, exc_value, exc_traceback):
     logger.error(
         "Uncaught exception", exc_info=(exc_type, exc_value, exc_traceback)
     )
+
 
 sys.excepthook = handle_exception

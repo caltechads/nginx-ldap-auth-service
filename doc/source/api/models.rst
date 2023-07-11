@@ -1,4 +1,4 @@
-.. _api__sessions:
+.. _api__models:
 
 Models
 ======

@@ -2,9 +2,8 @@
 # -*- coding: utf-8 -*-
 
 import os
-from typing import Annotated, Optional
 
-from fastapi import FastAPI, Header, Request, Response, status
+from fastapi import FastAPI, Request, Response, status
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
@@ -15,11 +14,12 @@ from starsessions import (
     get_session_handler,
 )
 from starsessions.stores.redis import RedisStore
+import structlog
 
 from nginx_ldap_auth import __version__
 from nginx_ldap_auth.settings import Settings
 
-from ..logging import logger
+from ..logging import get_logger
 
 from .forms import LoginForm
 from .middleware import SessionMiddleware
@@ -32,6 +32,10 @@ templates_dir = os.path.join(current_dir, "templates")
 
 settings = Settings()
 
+# --------------------------------------
+# Session Store
+# --------------------------------------
+
 if settings.session_backend == "memory":
     store: SessionStore = InMemoryStore()
 elif settings.session_backend == "redis":
@@ -40,7 +44,17 @@ elif settings.session_backend == "redis":
         prefix=settings.redis_prefix,
         gc_ttl=settings.session_max_age
     )
-logger.info("session.store", backend=settings.session_backend)
+    get_logger().info(
+        "session.store",
+        backend=settings.session_backend,
+        server=settings.redis_url,
+        max_age=settings.session_max_age
+    )
+
+
+# --------------------------------------
+# The FastAPI app
+# --------------------------------------
 
 app = FastAPI(
     title="nginx_ldap_auth",
@@ -56,6 +70,10 @@ app.add_middleware(
 )
 templates = Jinja2Templates(directory=templates_dir)
 
+
+# --------------------------------------
+# Startup and Shutdown Events
+# --------------------------------------
 
 @app.on_event("startup")
 async def startup() -> None:
@@ -73,6 +91,10 @@ async def shutdown() -> None:
     await User.objects.cleanup()
 
 
+# --------------------------------------
+# Helper Functions
+# --------------------------------------
+
 async def kill_session(request: Request) -> None:
     """
     Kill the current session.
@@ -88,26 +110,18 @@ async def kill_session(request: Request) -> None:
     await get_session_handler(request).destroy()
 
 
-def force_authentication(response: Response, auth_realm: str) -> None:
-    """
-    Force the user to authenticate by setting appropriate headers and
-    status codes on ``response``
 
-    Args:
-        response: The response object
-        auth_realm: The value to use for the "realm" setting of the
-            ``WWW-Authenticate`` header
-    """
-    response.headers["WWW-Authenticate"] = f'Basic realm="{auth_realm}"'
-    response.headers["Cache-Control"] = "no-cache"
-    response.status_code = status.HTTP_401_UNAUTHORIZED
 
+# --------------------------------------
+# Views
+# --------------------------------------
 
 @app.get("/auth/login", response_class=HTMLResponse, name="login")
 async def login(request: Request, service: str = "/"):
     """
-    If the user is already logged in, redirect to target URI, given by the
-    ``X-Target-URI`` header.  Otherwise, display the login form.
+    If the user is already logged in, redirect to the URI named by the ``service``,
+    query paremeter, defaulting to ``/`` if that is not present.  Otherwise, render
+    the login page.
 
     If the header ``X-Auth-Realm`` is set, use that as the title for the login
     page.  Otherwise use
@@ -120,11 +134,12 @@ async def login(request: Request, service: str = "/"):
         service: redirect the user to this URL after successful login
     """
     auth_realm = request.headers.get("x-auth-realm", settings.auth_realm)
-    logger.info("auth.login.start", target=service, realm=auth_realm, headers=request.headers)
+    _logger = get_logger(request)
+    _logger.info("auth.login.start", target=service)
     await load_session(request)
     if request.session.get("username"):
         session_id = get_session_handler(request).session_id
-        logger.info(
+        _logger.info(
             "auth.login.success.already_logged_in",
             username=request.session["username"],
             session_id=session_id,
@@ -144,8 +159,8 @@ async def login(request: Request, service: str = "/"):
 @app.post("/auth/login", response_class=HTMLResponse, name="login_handler")
 async def login_handler(request: Request):
     """
-    Process our user's login request.  If authentication is successful,
-    redirect to the target URI, given by the ``X-Target-URI`` header.
+    Process our user's login request.  If authentication is successful, redirect
+    to the value of the ``service`` hidden input field on our form.
 
     If authentication fails, display the login form again.
 
@@ -176,15 +191,16 @@ async def logout(request: Request):
     Args:
         request: The request object
     """
+    _logger = get_logger(request)
     await load_session(request)
     if username := request.session.get("username"):
         await kill_session(request)
-        logger.info("auth.logout", username=username)
+        _logger.info("auth.logout", username=username)
     return RedirectResponse(url='/auth/login?service=/')
 
 
 @app.get("/check")
-async def index(request: Request, response: Response):
+async def check_auth(request: Request, response: Response):
     """
     Ensure the user is still authorized.  If the user is authorized, return
     200 OK, otherwise return 401 Unauthorized.
