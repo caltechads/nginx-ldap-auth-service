@@ -12,6 +12,7 @@ clean:
 
 dist: clean
 	@python setup.py sdist
+	@python setup.py bdist_wheel --universal
 
 build:
 	docker build -t ${PACKAGE}:${VERSION} .
@@ -47,8 +48,8 @@ restart:
 exec:
 	docker exec -it nginx_ldap_auth /bin/bash
 
-release:
-	@bin/release.sh
+release: dist
+	@twine upload dist/*
 
 log:
 	docker-compose logs -f nginx_ldap_auth
