@@ -64,13 +64,11 @@ Now copy in the Docker environment file to the appropriate place on your dev box
 
     $ cp etc/environment.txt .env
 
-Edit ``.env`` replace these with their settings from "Duo/access.caltech dev/test environment settings" in the ADS KeePass:
+Edit ``.env`` replace these with settings appropriate for your LDAP/AD server:
 
 - ``__LDAP_URI__``
 - ``__LDAP_BINDDN__``
 - ``__LDAP_PASSWORD__``
-- ``__LDAP_FILTER__``
-- ``__COOKIE_NAME__``
 
 Build the Docker image
 ----------------------
@@ -86,7 +84,7 @@ Run the stack
 
     $ make dev
 
-This will bring up the full access.caltech stack:
+This will bring up the full dev stack:
 
 - ``nginx``
 - ``nginx-ldap-auth-service``
@@ -95,6 +93,6 @@ This will bring up the full access.caltech stack:
 Use your dev environment
 ------------------------
 
-You should how be able to browse to https://localhost/test and be redirected to the
+You should how be able to browse to https://localhost:8443/ and be redirected to the
 login page.
 

@@ -16,7 +16,7 @@ services:
 
   nginx_ldap_auth_service:
     image: nginx-ldap-auth-service:latest
-    hostname: auth-service
+    hostname: nginx-ldap-auth-auth-service
     ports:
       - "8888:8888"
     env_file:
