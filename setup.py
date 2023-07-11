@@ -17,7 +17,6 @@ setup(
         "aiodogstatsd==0.16.0.post0",
         "fastapi>=0.95.0",
         "uvicorn[standard]==0.21.1",
-        "gunicorn==22.0.1",
         "bonsai==1.5.1",
         "pydantic-settings",
         "pydantic>=1.9.0",
