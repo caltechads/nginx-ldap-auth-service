@@ -55,6 +55,6 @@ User authorization
 
 Other features
 --------------
-- Implemented in [FastAPI](https://fastapi.tiangolo.com/) for speed and
+- Implemented in `FastAPI <https://fastapi.tiangolo.com/>`_ for speed and
   connection management.
 - Available a Docker image that can be used as a sidecar container with nginx.
