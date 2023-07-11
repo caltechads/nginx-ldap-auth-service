@@ -47,7 +47,6 @@ extensions: List[str] = [
     'sphinx.ext.viewcode',
     'sphinx.ext.intersphinx',
     'sphinx_rtd_theme',
-    'sphinxcontrib.httpdomain',
 ]
 
 source_suffix: str = ".rst"
