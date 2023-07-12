@@ -43,16 +43,16 @@ devdown:
 	docker-compose down
 
 restart:
-	docker-compose restart nginx_ldap_auth
+	docker-compose restart nginx-ldap-auth-service
 
 exec:
-	docker exec -it nginx_ldap_auth /bin/bash
+	docker exec -it nginx-ldap-auth-service /bin/sh
 
 release: dist
 	@twine upload dist/*
 
 log:
-	docker-compose logs -f nginx_ldap_auth
+	docker-compose logs -f nginx-ldap-auth-service
 
 logall:
 	docker-compose logs -f
