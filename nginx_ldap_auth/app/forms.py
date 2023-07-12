@@ -37,9 +37,11 @@ class LoginForm:
         Return whether the form is valid.
 
         * the form must have a non-empty username and password
-        * the user must exist in LDAP and must pass the authorization test,
-          meaning that the user must be in the results of the ldap search
-          named by :py:attr:`nginx_ldap_auth.settings.Settings.ldap_filter`
+        * the user must exist in LDAP meaning that the user must be in the
+          results of the ldap search
+          named by :py:attr:`nginx_ldap_auth.settings.Settings.ldap_get_user_filter`
+        * If :py:attr:`nginx_ldap_auth.settings.Settings.ldap_authorization_filter`
+          is not ``None``, the user must be in the results of that LDAP search
         * the bind to LDAP must be successful
 
         If all those tests pass, return ``True``.  Otherwise, return ``False``.
@@ -57,6 +59,17 @@ class LoginForm:
         if user := await User.objects.get(cast(str, self.username)):
             # The user exists in LDAP
             user = cast(User, user)
+            # Ensure that the user is authorized to access this service
+            if not await User.objects.is_authorized(cast(str, self.username)):
+                self.errors.append("You are not authorized to access this service.")
+                _logger.warning(
+                    "auth.failed.not_authorized",
+                    username=self.username,
+                    full_name=user.full_name,
+                    ldap_url=settings.ldap_uri,
+                    target=self.service,
+                )
+            # Now try to authenticate the user
             if await user.authenticate(cast(str, self.password)):
                 # The user has provided valid credentials
                 _logger.info(

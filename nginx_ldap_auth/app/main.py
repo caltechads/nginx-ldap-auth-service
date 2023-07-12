@@ -110,8 +110,6 @@ async def kill_session(request: Request) -> None:
     await get_session_handler(request).destroy()
 
 
-
-
 # --------------------------------------
 # Views
 # --------------------------------------
@@ -208,6 +206,10 @@ async def check_auth(request: Request, response: Response):
     The user is authorized if the cookie exists, the session the cookie refers
     to exists, and the ``username`` key in the settings is set.
 
+    Additionally, the user must still exist in LDAP, and if
+    :py:attr:`nginx_ldap_auth.settings.Settings.ldap_authorization_filter` is
+    not ``None``, the user must also match the filter.
+
     Args:
         request: The request object
         response: The response object
@@ -216,6 +218,12 @@ async def check_auth(request: Request, response: Response):
         await load_session(request)
         if request.session.get("username"):
             # We have a valid session
+            if not await User.objects.get(request.session["username"]):
+                # The user does not exist in LDAP; log them out
+                await kill_session(request)
+            if not await User.objects.is_authorized(request.session["username"]):
+                # The user is not authorized
+                await kill_session(request)
             return {}
         else:
             # Destroy the session because it is not valid
