@@ -47,7 +47,7 @@ def print_settings():
 )
 @click.option(
     '--certfile', '-c',
-    default=lambda: os.environ.get('SSL_CERTFILE', '/certs/server.key'),
+    default=lambda: os.environ.get('SSL_CERTFILE', '/certs/server.crt'),
     type=click.Path(exists=True, dir_okay=False),
     help="The path to the SSL certificate file."
 )
