@@ -150,6 +150,17 @@ environment, or you can use an environment file and specify it with the
 The following environment variables are available to configure
 ``nginx-ldap-auth-service``:
 
+.. important::
+
+    You should set at least these variables to localize to your organization:
+    :envvar:`LDAP_URI`, :envvar:`LDAP_BINDDN`, :envvar:`LDAP_PASSWORD`,
+    :envvar:`LDAP_BASEDN`, and :envvar:`SECRET_KEY`.
+
+    You should also look at these variables to see whether their defaults work
+    for you: :envvar:`LDAP_USERNAME_ATTRIBUTE`,
+    :envvar:`LDAP_FULL_NAME_ATTRIBUTE`, :envvar:`LDAP_GET_USER_FILTER` and
+    :envvar:`LDAP_AUTHORIZATION_FILTER`
+
 Web Server
 ^^^^^^^^^^
 
@@ -259,7 +270,9 @@ These settings configure the LDAP server to use for authentication.
 .. envvar:: LDAP_GET_USER_FILTER
 
     The LDAP search filter to use when searching for users. Defaults to
-    ``(&(objectClass=person)(uid={username}))``.
+    ``{username_attribute}={username}``, where ``{username_attribute}`` is the
+    value of :envvar:`LDAP_USERNAME_ATTRIBUTE` and ``{username}`` is the
+    username provided by the user.
 
 .. envvar:: LDAP_AUTHORIZATION_FILTER
 

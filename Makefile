@@ -28,7 +28,8 @@ tag:
 	docker tag ${PACKAGE}:latest ${DOCKER_REGISTRY}/${PACKAGE}:latest
 
 push: tag
-	docker push ${DOCKER_REGISTRY}/${PACKAGE}
+	docker push ${DOCKER_REGISTRY}/${PACKAGE}:latest
+	docker push ${DOCKER_REGISTRY}/${PACKAGE}:${VERSION}
 
 pull:
 	docker pull ${DOCKER_REGISTRY}/${PACKAGE}:${VERSION}
