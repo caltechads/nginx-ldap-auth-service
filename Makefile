@@ -1,4 +1,4 @@
-VERSION = 2.0.2
+VERSION = 2.0.3
 
 PACKAGE = nginx-ldap-auth-service
 

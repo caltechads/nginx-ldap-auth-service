@@ -7,7 +7,7 @@ with open("README.md", "r", encoding='utf-8') as fh:
 
 setup(
     name="nginx-ldap-auth-service",
-    version="2.0.2",
+    version="2.0.3",
     description="A FastAPI app that authenticates users via LDAP and sets a cookie for nginx",
     author="Caltech IMSS ADS",
     author_email="imss-ads-staff@caltech.edu",
