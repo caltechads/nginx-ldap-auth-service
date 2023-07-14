@@ -209,6 +209,12 @@ These settings configure the login form and session handling.
 
     The domain for the cookie to use for the session. Defaults to no domain.
 
+.. envvar:: SESSION_MAX_AGE
+
+    How many seconds a session should last after first login.  Defaults to
+    ``0``, no expiry.   If :envvar:`USE_ROLLING_SESSIONS` is ``True``, this
+    value is used to reset the session lifetime on every request.
+
 .. envvar:: SECRET_KEY
 
     The secret key to use for the session. Defaults to ``SESSION_SECRET``.
