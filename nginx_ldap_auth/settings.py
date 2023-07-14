@@ -40,6 +40,9 @@ class Settings(BaseSettings):
     secret_key: str
     #: The maximum age of a session cookie in seconds
     session_max_age: int = 0
+    #: Reset the session lifetime to :py:attr:`session_max_age` every time the
+    #: user accesses the protected site
+    use_rolling_session: bool = False
     #: Session type: either ``redis`` or ``memory``
     session_backend: Literal['redis', 'memory'] = 'memory'
     #: If using the Redis session backend, the DSN on which to connect to Redis.

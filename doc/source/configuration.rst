@@ -224,6 +224,11 @@ These settings configure the login form and session handling.
     ``0``, no expiry.   If :envvar:`USE_ROLLING_SESSIONS` is ``True``, this
     value is used to reset the session lifetime on every request.
 
+.. envvar:: USE_ROLLING_SESSIONS
+
+    If ``True``, session lifetime will be reset to :envvar:`SESSION_MAX_AGE` on
+    every request.  Defaults to ``False``.
+
 .. envvar:: SECRET_KEY
 
     **Required** The secret key to use for the session. Defaults to ``SESSION_SECRET``.
