@@ -36,7 +36,7 @@ class Settings(BaseSettings):
     #: The domain to use for our session cookie, if any.
     cookie_domain: Optional[str] = None
     #: The secret key to use for session cookies
-    secret_key: str = 'SESSION_SECRET'
+    secret_key: str
     #: The maximum age of a session cookie in seconds
     session_max_age: int = 0
     #: Session type: either ``redis`` or ``memory``
@@ -61,7 +61,7 @@ class Settings(BaseSettings):
     #: Whether to disable LDAP referrals
     ldap_disable_referrals: bool = False
     #: The base DN under which to perform searches
-    ldap_basedn: str = 'ou=users,dc=example,dc=com'
+    ldap_basedn: str
     #: The LDAP attribute to use as the username when searching for a user
     ldap_username_attribute: str = 'uid'
     #: The LDAP attribute to use as the full name when getting search results

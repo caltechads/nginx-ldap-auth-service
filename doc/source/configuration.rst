@@ -152,14 +152,23 @@ The following environment variables are available to configure
 
 .. important::
 
-    You should set at least these variables to localize to your organization:
-    :envvar:`LDAP_URI`, :envvar:`LDAP_BINDDN`, :envvar:`LDAP_PASSWORD`,
-    :envvar:`LDAP_BASEDN`, and :envvar:`SECRET_KEY`.
+    You must set at least these variables to localize to your organization:
+
+    * :envvar:`LDAP_URI`
+    * :envvar:`LDAP_BINDDN`
+    * :envvar:`LDAP_PASSWORD`,
+    * :envvar:`LDAP_BASEDN`
+    * :envvar:`SECRET_KEY`.
 
     You should also look at these variables to see whether their defaults work
-    for you: :envvar:`LDAP_USERNAME_ATTRIBUTE`,
-    :envvar:`LDAP_FULL_NAME_ATTRIBUTE`, :envvar:`LDAP_GET_USER_FILTER` and
-    :envvar:`LDAP_AUTHORIZATION_FILTER`
+    for you:
+
+    * :envvar:`LDAP_USERNAME_ATTRIBUTE`
+    * :envvar:`LDAP_FULL_NAME_ATTRIBUTE`
+    * :envvar:`LDAP_GET_USER_FILTER`
+    * :envvar:`LDAP_AUTHORIZATION_FILTER`
+    * :envvar:`AUTH_REALM`
+    * :envvar:`SESSION_MAX_AGE`
 
 Web Server
 ^^^^^^^^^^
@@ -217,7 +226,7 @@ These settings configure the login form and session handling.
 
 .. envvar:: SECRET_KEY
 
-    The secret key to use for the session. Defaults to ``SESSION_SECRET``.
+    **Required** The secret key to use for the session. Defaults to ``SESSION_SECRET``.
 
 .. envvar:: SESSION_BACKEND
 
@@ -263,7 +272,7 @@ These settings configure the LDAP server to use for authentication.
 
 .. envvar:: LDAP_BASEDN
 
-    The base DN to use for our LDAP searches. Defaults to ``ou=users,dc=example,dc=com``.
+    **Required** The base DN to use for our LDAP searches.
 
 .. envvar:: LDAP_USERNAME_ATTRIBUTE
 
