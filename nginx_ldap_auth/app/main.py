@@ -235,7 +235,7 @@ async def check_auth(request: Request, response: Response):
                 # The user does not exist in LDAP; log them out
                 await kill_session(request)
             if not await User.objects.is_authorized(request.session["username"]):
-                # The user is not authorized
+                # The user is no longer authorized; log them out
                 await kill_session(request)
             return {}
         else:

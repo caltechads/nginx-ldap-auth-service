@@ -208,7 +208,7 @@ These settings configure the login form and session handling.
 
 .. envvar:: AUTH_REALM
 
-    The title for the login form. Defaults to ``Login``.
+    The title for the login form. Defaults to ``Restricted``.
 
 .. envvar:: COOKIE_NAME
 
@@ -294,13 +294,19 @@ These settings configure the LDAP server to use for authentication.
     The LDAP search filter to use when searching for users. Defaults to
     ``{username_attribute}={username}``, where ``{username_attribute}`` is the
     value of :envvar:`LDAP_USERNAME_ATTRIBUTE` and ``{username}`` is the
-    username provided by the user.
+    username provided by the user.  See :py:attr:`nginx_ldap_auth.settings.Settings.ldap_get_user_filter` for more details.
+
+    The filter will within the base DN given by :envvar:`LDAP_BASEDN` and with
+    scope of ``SUBTREE``.
 
 .. envvar:: LDAP_AUTHORIZATION_FILTER
 
     The LDAP search filter to use when determining if a user is authorized to login.
     for authorizations. Defaults to no filter, meaning all users are authorized if
-    they exist in LDAP.
+    they exist in LDAP. See :py:attr:`nginx_ldap_auth.settings.Settings.ldap_authorization_filter` for more details.
+
+    The filter will within the base DN given by :envvar:`LDAP_BASEDN` and with
+    scope of ``SUBTREE``.
 
 .. envvar:: LDAP_TIMEOUT
 
