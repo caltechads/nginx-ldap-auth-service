@@ -2,11 +2,13 @@
 # -*- coding: utf-8 -*-
 
 import os
+from typing import cast
 
 from fastapi import FastAPI, Request, Response, status
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
+from pydantic import AnyUrl
 from starsessions import (
     InMemoryStore,
     SessionStore,
@@ -38,17 +40,20 @@ settings = Settings()
 
 if settings.session_backend == "memory":
     store: SessionStore = InMemoryStore()
+    get_logger().info("session.store", backend=settings.session_backend)
 elif settings.session_backend == "redis":
     store = RedisStore(
-        settings.redis_url,
+        str(settings.redis_url),
         prefix=settings.redis_prefix,
         gc_ttl=settings.session_max_age
     )
+    redis_url = cast(AnyUrl, settings.redis_url)
     get_logger().info(
         "session.store",
         backend=settings.session_backend,
-        server=settings.redis_url,
-        max_age=settings.session_max_age
+        server=redis_url.host,
+        port=redis_url.port,
+        db=redis_url.path,
     )
 
 
@@ -67,6 +72,14 @@ app.add_middleware(
     store=store,
     cookie_name=settings.cookie_name,
     lifetime=settings.session_max_age
+)
+get_logger().info(
+    "session.setup.complete",
+    backend=settings.session_backend,
+    cookie_name=settings.cookie_name,
+    cookie_domain=settings.cookie_domain,
+    max_age=settings.session_max_age,
+    rolling=settings.use_rolling_session
 )
 templates = Jinja2Templates(directory=templates_dir)
 
