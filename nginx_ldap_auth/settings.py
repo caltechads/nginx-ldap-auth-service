@@ -1,4 +1,5 @@
 from typing import Optional
+from pydantic import ValidationError, model_validator, RedisDsn
 from pydantic_settings import BaseSettings, SettingsConfigDict
 try:
     from typing import Literal
@@ -41,8 +42,19 @@ class Settings(BaseSettings):
     session_max_age: int = 0
     #: Session type: either ``redis`` or ``memory``
     session_backend: Literal['redis', 'memory'] = 'memory'
-    #: If using the Redis session backend, the URL to connect to Redis on
-    redis_url: str = 'redis://localhost'
+    #: If using the Redis session backend, the DSN on which to connect to Redis.
+    #:
+    #: A fully specified Redis DSN looks like this::
+    #:
+    #:       redis://[username][:password]@host:port/db
+    #:
+    #: * The username is only necessary if you are using role-based access
+    #:   controls on your Redis server.  Otherwise the password is sufficient if you
+    #:   have a server password for your Redis server.
+    #: * If you don't specify a database, ``0`` is used.
+    #: * If you don't specify a password, no password is used.
+    #: * If you don't specify a port, ``6379`` is used.
+    redis_url: Optional[RedisDsn] = None
     #: If using the Redis session backend, the prefix to use for session keys
     redis_prefix: str = "nginx_ldap_auth."
 
@@ -108,3 +120,16 @@ class Settings(BaseSettings):
     sentry_url: Optional[str] = None
 
     model_config = SettingsConfigDict()
+
+    @model_validator(mode='after')  #: type: ignore
+    def redis_url_required_if_session_type_is_redis(self):
+        """
+        If we've configured the session backend to be ``redis``,
+        :py:attr:`redis_url` is required.
+
+        Raises:
+            ValidationError: ``redis_url`` is required if ``session_backend`` is ``redis``
+        """
+        if self.session_backend == 'redis' and not self.redis_url:
+            raise ValidationError('redis_url is required if session_backend is redis')
+        return self

@@ -232,11 +232,13 @@ These settings configure the login form and session handling.
 
     The session backend to use. Defaults to ``memory``.  Valid options are
     ``memory`` and ``redis``.  If you choose ``redis``, you must also set
-    :envvar:`REDIS_URL` and possibly :envvar:`REDIS_PORT`.
+    :envvar:`REDIS_URL`.
 
 .. envvar:: REDIS_URL
 
-    The URL to the Redis server. Defaults to ``redis://localhost``.
+    The DSN to the Redis server.  See :py:attr:`nginx_ldap_auth.settings.Settings.redis_url` for details on the format of the DSN.
+
+    Defaults to ``None``
 
 .. envvar:: REDIS_PREFIX
 
