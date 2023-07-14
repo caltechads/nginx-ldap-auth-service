@@ -21,6 +21,8 @@ import sphinx_rtd_theme  # pylint: disable=unused-import  # noqa:F401
 os.environ['LDAP_URI'] = 'ldap://ldap.example.com'
 os.environ['LDAP_BINDDN'] = 'cn=admin,dc=example,dc=com'
 os.environ['LDAP_PASSWORD'] = 'password'
+os.environ['LDAP_BASEDN'] = 'dc=example,dc=com'
+os.environ['SECRET_KEY'] = 'my-key'
 
 # -- Project information -----------------------------------------------------
 
