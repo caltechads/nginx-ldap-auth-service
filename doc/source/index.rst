@@ -4,6 +4,7 @@ nginx-ldap-auth-service
 
 .. toctree::
    :hidden:
+   :caption: Overview
 
    installation
    running

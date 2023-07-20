@@ -5,6 +5,20 @@ PACKAGE = nginx-ldap-auth-service
 DOCKER_REGISTRY = caltechads
 #======================================================================
 
+image_name:
+	@echo ${PACKAGE}
+
+version:
+	@echo ${VERSION}
+
+docs:
+	@echo "Installing docs dependencies ..."
+	@pip install -r doc/requirements.txt
+	@echo "Generating docs..."
+	@cd doc && rm -rf build && make json
+	@cd doc/build && tar zcf docs.tar.gz json
+	@mv doc/build/docs.tar.gz .
+	@echo "New doc package is in docs.tar.gz"
 
 clean:
 	rm -rf *.tar.gz dist *.egg-info *.rpm
@@ -50,6 +64,7 @@ exec:
 	docker exec -it nginx-ldap-auth-service /bin/sh
 
 release: dist
+	@bin/release.sh
 	@twine upload dist/*
 
 log:

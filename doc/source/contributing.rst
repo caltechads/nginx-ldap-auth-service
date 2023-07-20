@@ -15,13 +15,13 @@ In order to make a clone of the Github repo:
 
 Workflow is pretty straightforward:
 
-1. Make sure you are reading the latest version of this document.
-2. Setup your machine with the required development environment
-3. Checkout a new branch, named for yourself and a summary of what you're trying to accomplish.
-4. Make a change
-5. Make sure all tests passed
-6. Commit changes to your branch
-8. Merge your changes into master and push.
+#. Make sure you are reading the latest version of this document.
+#. Setup your machine with the required development environment
+#. Checkout a new branch, named for yourself and a summary of what you're trying to accomplish.
+#. Make a change
+#. Make sure all tests passed
+#. Commit changes to your branch
+#. Merge your changes into master and push.
 
 
 Preconditions for working on nginx-ldap-auth-service
@@ -68,6 +68,7 @@ Edit ``.env`` replace these with settings appropriate for your LDAP/AD server:
 
 - ``__LDAP_URI__``
 - ``__LDAP_BINDDN__``
+- ``__LDAP_BASEDN__``
 - ``__LDAP_PASSWORD__``
 
 Build the Docker image
@@ -88,11 +89,18 @@ This will bring up the full dev stack:
 
 - ``nginx``
 - ``nginx-ldap-auth-service``
-- Redis 7.x (for session storage)
+
+If you want to bring up a redis instance for session storage, you can do that by
+uncommenting the ``redis`` service in ``docker-compose.yml`` and adding these
+two settings to the ``environment`` section of the ``nginx_ldap_auth_service``
+service::
+
+    - SESSION_BACKEND=redis
+    - REDIS_URL=redis://redis:6379/0
 
 Use your dev environment
 ------------------------
 
-You should how be able to browse to https://localhost:8443/ and be redirected to the
-login page.
+You should how be able to browse to https://localhost:8443/ and be redirected to
+the login page.
 

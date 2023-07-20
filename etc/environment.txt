@@ -5,11 +5,17 @@ LDAP_PASSWORD=__LDAP_PASSWORD__
 LDAP_BASEDN=ou=users,dc=example,dc=com
 # SENTRY_URL=None
 
+# Uncomment the below if you want to use the
+# Redis backend for session storage in dev
+# ------------------------------------------
+# SESSION_BACKEND=redis
+# REDIS_URL=redis://localhost
+
+# Set any of the below as necessary
+# ------------------------------------------
 # COOKIE_NAME=nginxauth
 # SESSION_MAX_AGE=0
 # USE_ROLLING_SESSIONS=False
-# SESSION_BACKEND=memory
-# REDIS_URL=redis://localhost
 # REDIS_PREFIX=nginx_ldap_auth.
 # LDAP_STARTTLS=True
 # LDAP_DISABLE_REFERRALS=False

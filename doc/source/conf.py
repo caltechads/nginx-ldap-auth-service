@@ -14,7 +14,7 @@ import os
 import sys
 sys.path.insert(0, os.path.abspath('../..'))
 
-from typing import List, Dict, Tuple, Optional
+from typing import List, Dict, Tuple, Optional, Any
 import sphinx_rtd_theme  # pylint: disable=unused-import  # noqa:F401
 
 # These are required for sphinx-apidoc to work
@@ -49,6 +49,7 @@ extensions: List[str] = [
     'sphinx.ext.viewcode',
     'sphinx.ext.intersphinx',
     'sphinx_rtd_theme',
+    'sphinx_json_globaltoc'
 ]
 
 source_suffix: str = ".rst"
@@ -61,8 +62,8 @@ templates_path: List[str] = ['_templates']
 # This pattern also affects html_static_path and html_extra_path.
 exclude_patterns: List[str] = ['_build']
 
-add_function_parentheses: str = False
-add_module_names: str = True
+add_function_parentheses: bool = False
+add_module_names: bool = True
 
 autodoc_member_order: str = 'bysource'
 autodoc_type_aliases: Dict[str, str] = {}
