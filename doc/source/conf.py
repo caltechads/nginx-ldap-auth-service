@@ -34,7 +34,7 @@ copyright: str = '2023, Caltech IMSS ADS'  # pylint: disable=redefined-builtin
 author: str = 'Caltech IMSS ADS'
 
 # The full version, including alpha/beta/rc tags
-release: str = '2.0.4'
+release: str = '2.0.5'
 
 
 # -- General configuration ---------------------------------------------------
