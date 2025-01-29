@@ -5,6 +5,8 @@ from fastapi import Depends, FastAPI, Request, Response, status
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
+from fastapi_csrf_protect import CsrfProtect
+from fastapi_csrf_protect.exceptions import CsrfProtectError
 from pydantic import AnyUrl, Field
 from pydantic_settings import BaseSettings
 from starsessions import (
@@ -51,6 +53,34 @@ elif settings.session_backend == "redis":
         port=redis_url.port,
         db=redis_url.path,
     )
+
+# --------------------------------------
+# CSRF Protection
+# --------------------------------------
+
+
+class CsrfSettings(BaseSettings):
+    #: The secret key to use for CSRF tokens
+    secret_key: str = Field(validation_alias="CSRF_SECRET_KEY")
+    #: We'll set the SameSite attribute on our CSRF cookies to this value
+    cookie_samesite: str = "lax"
+    #: Set our CSRF cookie to be secure
+    cookie_secure: bool = True
+    #: Set the maximum age of our CSRF cookie to 5 minutes
+    max_age: int = 300
+    #: Cookie name
+    cookie_key: str = f"{settings.cookie_name}_csrf"
+    #: Cookie domain
+    cookie_domain: str | None = settings.cookie_domain
+    #: Token location for validation -- in the csrf_token field in the body
+    token_location: str = "body"  # noqa: S105
+    #: The key to use for the CSRF token -- the name of the field in the body
+    token_key: str = "csrf_token"  # noqa: S105
+
+
+@CsrfProtect.load_config
+def get_csrf_config():
+    return CsrfSettings()
 
 
 # --------------------------------------
@@ -122,8 +152,13 @@ async def kill_session(request: Request) -> None:
 # Views
 # --------------------------------------
 
-@app.get("/auth/login", response_class=HTMLResponse, name="login")
-async def login(request: Request, service: str = "/"):
+
+@app.get("/auth/login", response_model=None, name="login")
+async def login(
+    request: Request,
+    csrf_protect: Annotated[CsrfProtect, Depends()],
+    service: str = "/",
+) -> HTMLResponse | RedirectResponse:
     """
     If the user is already logged in, redirect to the URI named by the ``service``,
     query paremeter, defaulting to ``/`` if that is not present.  Otherwise, render
@@ -135,10 +170,17 @@ async def login(request: Request, service: str = "/"):
 
     Args:
         request: The request object
+        csrf_protect: The CSRF protection dependency
 
     Keyword Args:
         service: redirect the user to this URL after successful login
+
+    Returns:
+        If the user is already logged in, a redirect response to the service URL.
+        Otherwise, a rendered login page.
+
     """
+    csrf_token, signed_token = csrf_protect.generate_csrf_tokens()
     auth_realm = request.headers.get("x-auth-realm", settings.auth_realm)
     _logger = get_logger(request)
     _logger.info("auth.login.start", target=service)
@@ -151,19 +193,33 @@ async def login(request: Request, service: str = "/"):
             session_id=session_id,
             target=service,
         )
+        # semgrep-reason:
+        #    The service URL is passed in by nginx, and the user cannot directly
+        #    reach this URL unless nginx says it needs to, so this is safe.
+        # nosemgrep: tainted-redirect-fastapi  # noqa: ERA001
         return RedirectResponse(url=service)
-    return templates.TemplateResponse(
+    # semgrep-reason:
+    #    The service URL is passed in by nginx, and the user cannot directly
+    #    reach this URL unless nginx says it needs to, so this is safe.
+    # nosemgrep: tainted-direct-response-fastapi  # noqa: ERA001
+    response = templates.TemplateResponse(
         "login.html",
         {
             "request": request,
             "site_title": auth_realm,
-            "service": service
-        }
+            "service": service,
+            "csrf_token": csrf_token,
+        },
     )
+    csrf_protect.set_csrf_cookie(signed_token, response)
+    return response
 
 
-@app.post("/auth/login", response_class=HTMLResponse, name="login_handler")
-async def login_handler(request: Request):
+@app.post("/auth/login", response_model=None, name="login_handler")
+async def login_handler(
+    request: Request,
+    csrf_protect: Annotated[CsrfProtect, Depends()],
+) -> HTMLResponse | RedirectResponse:
     """
     Process our user's login request.  If authentication is successful, redirect
     to the value of the ``service`` hidden input field on our form.
@@ -176,17 +232,28 @@ async def login_handler(request: Request):
 
     Args:
         request: The request object
+        csrf_protect: The CSRF protection dependency
+
+    Returns:
+        A redirect response to the service URL if authentication is successful.
+        Otherwise, a rendered login page.
+
     """
     auth_realm = request.headers.get("x-auth-realm", settings.auth_realm)
+    await csrf_protect.validate_csrf(request)
     form = LoginForm(request)
     form.site_title = auth_realm
     await form.load_data()
     if await form.is_valid():
         await load_session(request)
         request.session["username"] = form.username
-        return RedirectResponse(url=form.service, status_code=status.HTTP_302_FOUND)
+        response: HTMLResponse | RedirectResponse = RedirectResponse(
+            url=form.service, status_code=status.HTTP_302_FOUND
+        )
     else:
-        return templates.TemplateResponse("login.html", form.__dict__)
+        response = templates.TemplateResponse("login.html", form.__dict__)
+    csrf_protect.unset_csrf_cookie(response)  # prevent token reuse
+    return response
 
 
 @app.get("/auth/logout", response_model=None, name="logout")
