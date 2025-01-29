@@ -1,11 +1,11 @@
 import typing
+
 from starlette.datastructures import MutableHeaders
 from starlette.requests import HTTPConnection
 from starlette.types import Message, Receive, Scope, Send
-
-from starsessions.session import SessionHandler, get_session_remaining_seconds
 from starsessions import SessionMiddleware as StarsessionsSessionMiddleware
 from starsessions.middleware import LoadGuard
+from starsessions.session import SessionHandler, get_session_remaining_seconds
 
 
 class SessionMiddleware(StarsessionsSessionMiddleware):
@@ -19,14 +19,17 @@ class SessionMiddleware(StarsessionsSessionMiddleware):
     on the request.  This is necessary because we may have multiple nginx severs
     that use a single ``nginx_ldap_auth`` server for authentication.
 
-    .. note::
+    Note:
         Unfortunately, the  :py:meth:``__call__`` method is monolithic in the
         superclass, so we have to re-implement it here in is entirety to do
         what we want to do.
+
     """
 
-    COOKIE_NAME_HEADER: typing.Final[str] = 'X-Cookie-Name'
-    COOKIE_DOMAIN_HEADER: typing.Final[str] = 'X-Cookie-Domain'
+    #: The header name for the cookie name passed in by nginx.
+    COOKIE_NAME_HEADER: typing.Final[str] = "X-Cookie-Name"
+    #: The header name for the cookie domain passed in by nginx.
+    COOKIE_DOMAIN_HEADER: typing.Final[str] = "X-Cookie-Domain"
 
     async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
         if scope["type"] not in ("http", "websocket"):  # pragma: no cover
@@ -35,9 +38,13 @@ class SessionMiddleware(StarsessionsSessionMiddleware):
 
         connection = HTTPConnection(scope)
         cookie_name = connection.headers.get(self.COOKIE_NAME_HEADER, self.cookie_name)
-        cookie_domain = connection.headers.get(self.COOKIE_DOMAIN_HEADER, self.cookie_domain)
+        cookie_domain = connection.headers.get(
+            self.COOKIE_DOMAIN_HEADER, self.cookie_domain
+        )
         session_id = connection.cookies.get(cookie_name)
-        handler = SessionHandler(connection, session_id, self.store, self.serializer, self.lifetime)
+        handler = SessionHandler(
+            connection, session_id, self.store, self.serializer, self.lifetime
+        )
 
         scope["session"] = LoadGuard()
         scope["session_handler"] = handler
@@ -60,9 +67,12 @@ class SessionMiddleware(StarsessionsSessionMiddleware):
                     await send(message)
                     return
 
-                # session data loaded but empty, no matter whether it was initially empty or cleared
-                # we have to remove the cookie and clear the storage
-                if not self.cookie_path or self.cookie_path and scope["path"].startswith(self.cookie_path):
+                # session data loaded but empty, no matter whether it was
+                # initially empty or cleared we have to remove the cookie and
+                # clear the storage
+                if not self.cookie_path or (
+                    self.cookie_path and scope["path"].startswith(self.cookie_path)
+                ):
                     headers = MutableHeaders(scope=message)
                     header_value = "{}={}; {}".format(
                         cookie_name,

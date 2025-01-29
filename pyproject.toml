@@ -1,0 +1,188 @@
+[project]
+name = "nginx-ldap-auth-service"
+version = "2.0.5"
+description = "A FastAPI app that authenticates users via LDAP and sets a cookie for nginx"
+readme = "README.md"
+requires-python = ">=3.11"
+authors = [
+    {name = "Caltech IMSS ADS", email = "imss-ads-staff@caltech.edu"},
+]
+maintainers = [
+    {name = "Christopher Malek", email = "cmalek@caltech.edu"},
+]
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Development Status :: 3 - Alpha",
+    "Framework :: FastAPI",
+    "Intended Audience :: Information Technology",
+    "Intended Audience :: System Administrators",
+    "Intended Audience :: Developers",
+    "Topic :: Internet :: WWW/HTTP",
+    "Topic :: System :: Systems Administration :: Authentication/Directory :: LDAP",
+]
+keywords = ["nginx", "ldap", "auth", "fastapi", "devops"]
+dependencies = [
+    "aiodogstatsd==0.16.0.post0",
+    "bonsai==1.5.3",
+    "click>=8.0.1",
+    "fastapi>=0.115.7 ",
+    "fastapi-csrf-protect>=1.0.0",
+    "jinja2>=3.0.3",
+    "pydantic-settings>=2.0.0",
+    "pydantic>=2.0.0",
+    "python-dotenv>=1.0.1",
+    "python-multipart>=0.0.6",
+    "sentry-sdk>=2.20.0",
+    "starsessions[redis]>=2.1.1",
+    "structlog>=23.2.0",
+    "tabulate>=0.8.9",
+    "uvicorn[standard]>=0.34.0",
+    "watchfiles>=1.0.4",
+    "httptools>=0.6.4",
+]
+
+[project.scripts]
+nginx-ldap-auth = "nginx_ldap_auth.main:main"
+
+[tool.uv]
+python-preference = "only-system"
+dev-dependencies = [
+    "ipython>=7.23.0",
+]
+
+[project.optional-dependencies]
+docs = [
+  "Sphinx<7",
+  "sphinx_rtd_theme == 2.0.0",
+  "sphinxcontrib-jsonglobaltoc==0.1.1",
+  "sphinxcontrib-images >= 0.9.4",
+  "setuptools>=75.1.0",
+]
+
+[build-system]
+requires = [
+    "setuptools >= 48",
+    "wheel >= 0.29.0",
+]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+# ...
+# By default, include-package-data is true in pyproject.toml, so you do
+# NOT have to specify this line.
+include-package-data = true
+
+[tool.setuptools.packages.find]
+where = ["."]
+
+[tool.setuptools.package-data]
+pkgname = ["py.typed"]
+
+[tool.mypy]
+exclude = "(^build/.*$|^doc/.*\\.py$|test_.*\\.py$)"
+plugins = ["pydantic.mypy"]
+
+[[tool.mypy.overrides]]
+module = "bonsai.*"
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = "sphinx_rtd_theme.*"
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = "redis.*"
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = "sentry_sdk.*"
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = "fastapi_csrf_protect.*"
+ignore_missing_imports = true
+
+[tool.ruff]
+# Same as Black.
+line-length = 88
+indent-width = 4
+
+[tool.ruff.lint]
+select = ["ALL"]
+ignore = [
+    #### modules
+    "ANN", # flake8-annotations
+    "COM", # flake8-commas
+    "C90", # mccabe complexity
+    "DJ",  # django
+    "EXE", # flake8-executable
+    "T10", # debugger
+    "TID", # flake8-tidy-imports
+
+    #### specific rules
+    "D100",   # ignore missing docs
+    "D101",
+    "D102",
+    "D103",
+    "D104",
+    "D105",
+    "D106",
+    "D107",
+    "D200",
+    "D205",
+    "D212",
+    "D400",
+    "D401",
+    "D415",
+    "E402",   # false positives for local imports
+    "S603",   # ignore subprocess calls that do not check return code
+    "S607",   # ignore subprocess programs that are not absolute paths
+    "TRY003", # external messages in exceptions are too verbose
+    "T201",   # ignore print statements
+    "TD002",
+    "TD003",
+    "FIX002", # too verbose descriptions of todos
+    "SIM102", # combine nested ifs
+    "UP006",  # stop bugging me about modern type hints
+    "FBT001", # stop bugging me about booleans in function signatures
+    "FBT002", # stop bugging me about booleans in function signatures
+    "N818",   # stop bugging me about not ending my exceptions with "Error"
+]
+
+# Allow fix for all enabled rules (when `--fix`) is provided.
+fixable = ["ALL"]
+unfixable = []
+
+# Allow unused variables when underscore-prefixed.
+dummy-variable-rgx = "^(_+|(_+[a-zA-Z0-9_]*[a-zA-Z0-9]+?))$"
+
+[tool.ruff.format]
+# Like Black, use double quotes for strings.
+quote-style = "double"
+
+# Like Black, indent with spaces, rather than tabs.
+indent-style = "space"
+
+# Like Black, respect magic trailing commas.
+skip-magic-trailing-comma = false
+
+# Like Black, automatically detect the appropriate line ending.
+line-ending = "auto"
+
+# Enable auto-formatting of code examples in docstrings. Markdown,
+# reStructuredText code/literal blocks and doctests are all supported.
+#
+# This is currently disabled by default, but it is planned for this
+# to be opt-out in the future.
+docstring-code-format = false
+
+# Set the line length limit used when formatting code snippets in
+# docstrings.
+#
+# This only has an effect when the `docstring-code-format` setting is
+# enabled.
+docstring-code-line-length = "dynamic"

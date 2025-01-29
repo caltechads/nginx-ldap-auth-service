@@ -1,0 +1,2 @@
+docker-compose.yml
+etc/nginx/certs/localhost.key

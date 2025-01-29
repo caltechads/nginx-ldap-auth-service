@@ -1,11 +1,4 @@
-#!/usr/bin/env python
-# -*- coding: utf-8 -*-
+from typing import TypeAlias  # noqa: A005
 
-from typing import (
-    List,
-    Dict
-)
-
-
-LDAPValue = List[str]
-LDAPObject = Dict[str, LDAPValue]
+LDAPValue: TypeAlias = list[str]
+LDAPObject: TypeAlias = dict[str, LDAPValue]

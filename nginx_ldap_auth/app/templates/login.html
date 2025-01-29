@@ -44,8 +44,15 @@
                     <div class="alert alert-danger mb-3" role="alert">{{ error }}</div>
                     {% endfor %}
                 {% endif %}
+                <--!
+                semgrep-reason:
+                    semgrep is confused -- we're clearly using a csrf_token here, and more than that, this is
+                    not Django.
+                -->
+                <--! nosemgrep: django-no-csrf-token -->
                 <form method="post" action="/auth/login">
                     <input type="hidden" name="service" value="{{ service }}">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
                     <div class="form-outline mb-4">
                         <input class="form-control form-control-lg" type="text" name="username" id="username" placeholder="Username" required="true" autofocus="true" autocomplete="username" autocapitalize="none" autocorrect="off" spellcheck="false" value="{{ username }}">
                     </div>

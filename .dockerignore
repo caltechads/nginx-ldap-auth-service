@@ -15,9 +15,10 @@ jmeter
 terraform
 .mypy_cache
 
-# Ignore the sql folder 
+# Ignore the sql folder
 sql/docker
 
 # Ignore any SQL dumps
 *.sql
+.venv
 

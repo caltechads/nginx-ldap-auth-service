@@ -1,5 +1,4 @@
-from typing import List, cast
-from typing import Optional
+from typing import cast
 
 from fastapi import Request
 
@@ -17,9 +16,9 @@ class LoginForm:
 
     def __init__(self, request: Request):
         self.request: Request = request
-        self.errors: List = []
-        self.username: Optional[str] = None
-        self.password: Optional[str] = None
+        self.errors: list = []
+        self.username: str | None = None
+        self.password: str | None = None
         self.service: str = "/"
         self.site_title: str = settings.auth_realm
 
@@ -28,8 +27,8 @@ class LoginForm:
         Load data from request form.
         """
         form = await self.request.form()
-        self.username = cast(Optional[str], form.get("username"))
-        self.password = cast(Optional[str], form.get("password"))
+        self.username = cast(str, form.get("username"))
+        self.password = cast(str, form.get("password"))
         self.service = cast(str, form.get("service", "/"))
 
     async def is_valid(self) -> bool:
@@ -48,6 +47,7 @@ class LoginForm:
 
         Returns:
             ``True`` if the form is valid, ``False`` otherwise.
+
         """
         _logger = get_logger(self.request)
         if not self.username:
@@ -93,6 +93,4 @@ class LoginForm:
                 username=self.username,
                 target=self.service,
             )
-        if not self.errors:
-            return True
-        return False
+        return bool(not self.errors)

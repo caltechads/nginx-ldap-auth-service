@@ -1,14 +1,10 @@
-from typing import Optional
-from pydantic import ValidationError, model_validator, RedisDsn
+from typing import Literal
+
+from pydantic import RedisDsn, ValidationError, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
-try:
-    from typing import Literal
-except ImportError:
-    from typing_extensions import Literal  # type: ignore
 
 
 class Settings(BaseSettings):
-
     # ==================
     # Logging
     # ==================
@@ -16,9 +12,9 @@ class Settings(BaseSettings):
     #: FastAPI debug mode
     debug: bool = False
     #: Default log level.  Choose from any of the standard Python log levels.
-    loglevel: Literal['NOTSET', 'DEBUG', 'INFO', 'WARN', 'ERROR', 'CRITICAL'] = 'INFO'
+    loglevel: Literal["NOTSET", "DEBUG", "INFO", "WARN", "ERROR", "CRITICAL"] = "INFO"
     #: What format should we log in?  Valid values are ``json`` and ``text``
-    log_type: Literal['json', 'text'] = 'text'
+    log_type: Literal["json", "text"] = "text"
 
     # ==================
     # HTTP
@@ -26,16 +22,16 @@ class Settings(BaseSettings):
 
     #: Use this as the title for the login form, to give a hint to the
     #: user as to what they're logging into
-    auth_realm: str = 'Restricted'
+    auth_realm: str = "Restricted"
 
     # ==================
     # Session
     # ==================
 
     #: The name of the cookie to set when a user authenticates
-    cookie_name: str = 'nginxauth'
+    cookie_name: str = "nginxauth"
     #: The domain to use for our session cookie, if any.
-    cookie_domain: Optional[str] = None
+    cookie_domain: str | None = None
     #: The secret key to use for session cookies
     secret_key: str
     #: The maximum age of a session cookie in seconds
@@ -44,7 +40,7 @@ class Settings(BaseSettings):
     #: user accesses the protected site
     use_rolling_session: bool = False
     #: Session type: either ``redis`` or ``memory``
-    session_backend: Literal['redis', 'memory'] = 'memory'
+    session_backend: Literal["redis", "memory"] = "memory"
     #: If using the Redis session backend, the DSN on which to connect to Redis.
     #:
     #: A fully specified Redis DSN looks like this::
@@ -57,7 +53,7 @@ class Settings(BaseSettings):
     #: * If you don't specify a database, ``0`` is used.
     #: * If you don't specify a password, no password is used.
     #: * If you don't specify a port, ``6379`` is used.
-    redis_url: Optional[RedisDsn] = None
+    redis_url: RedisDsn | None = None
     #: If using the Redis session backend, the prefix to use for session keys
     redis_prefix: str = "nginx_ldap_auth."
 
@@ -78,34 +74,39 @@ class Settings(BaseSettings):
     #: The base DN under which to perform searches
     ldap_basedn: str
     #: The LDAP attribute to use as the username when searching for a user
-    ldap_username_attribute: str = 'uid'
+    ldap_username_attribute: str = "uid"
     #: The LDAP attribute to use as the full name when getting search results
-    ldap_full_name_attribute: str = 'cn'
+    ldap_full_name_attribute: str = "cn"
     #: The LDAP search filter to use when searching for a user.  This should
     #: be a valid LDAP search filter.  The search will be a SUBTREE search
     #: with the base DN of :py:attr:`ldap_basedn`.
     #:
     #: You may use these replacement fields in the filter:
     #:
-    #: - ``{username_attribute}``: the value of :py:class:`Settings.ldap_username_attribute`
-    #: - ``{username_full_name_attribute}``: the value of :py:class:`Settings.ldap_full_name_attribute`
+    #: - ``{username_attribute}``: the value of
+    #:   :py:class:`Settings.ldap_username_attribute`
+    #: - ``{username_full_name_attribute}``: the value of
+    #:   :py:class:`Settings.ldap_full_name_attribute`
     #:
     #: Use ``{username}`` in the search filter as the placeholder for the username
     #: supplied by the user from the login form.
-    ldap_get_user_filter: str = '{username_attribute}={username}'
+    ldap_get_user_filter: str = "{username_attribute}={username}"
     #: The LDAP search filter to use to determine whether a user is authorized.  This
-    #: should a valid LDAP search filter. If this is ``None``, all users who can successfully
-    #: authenticate will be authorized.  If this is not ``None``, the search with this
-    #: filter must return at least one result for the user to be authorized.
+    #: should a valid LDAP search filter. If this is ``None``, all users who can
+    #: successfully authenticate will be authorized.  If this is not ``None``,
+    #: the search with this filter must return at least one result for the user
+    #: to be authorized.
     #:
     #: You may use these replacement fields in the filter:
     #:
-    #: - ``{username_attribute}``: the value of :py:attr:`ldap_username_attribute`
-    #: - ``{username_full_name_attribute}``: the value of :py:attr:`ldap_full_name_attribute`
+    #: - ``{username_attribute}``: the value of
+    #:   :py:attr:`ldap_username_attribute`
+    #: - ``{username_full_name_attribute}``: the value of
+    #:   :py:attr:`ldap_full_name_attribute`
     #:
     #: Use ``{username}`` in the search filter as the placeholder for the username
     #: supplied by the user from the login form.
-    ldap_authorization_filter: Optional[str] = None
+    ldap_authorization_filter: str | None = None
     #: Number of seconds to wait for an LDAP connection to be established
     ldap_timeout: int = 15
     #: Min number of LDAP connections to keep in the pool
@@ -120,19 +121,22 @@ class Settings(BaseSettings):
     # ==================
     #: The sentry DSN to use for error reporting.  If this is ``None``, no
     #: error reporting will be done.
-    sentry_url: Optional[str] = None
+    sentry_url: str | None = None
 
     model_config = SettingsConfigDict()
 
-    @model_validator(mode='after')  #: type: ignore
+    @model_validator(mode="after")  #: type: ignore
     def redis_url_required_if_session_type_is_redis(self):
         """
         If we've configured the session backend to be ``redis``,
         :py:attr:`redis_url` is required.
 
         Raises:
-            ValidationError: ``redis_url`` is required if ``session_backend`` is ``redis``
+            ValidationError: ``redis_url`` is required if ``session_backend`` is
+            ``redis``
+
         """
-        if self.session_backend == 'redis' and not self.redis_url:
-            raise ValidationError('redis_url is required if session_backend is redis')
+        if self.session_backend == "redis" and not self.redis_url:
+            msg = "redis_url is required if session_backend is redis"
+            raise ValidationError(msg)
         return self

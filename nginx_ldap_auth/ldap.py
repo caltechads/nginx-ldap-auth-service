@@ -1,5 +1,3 @@
-#!/usr/bin/env python
-# -*- coding: utf-8 -*-
 import time
 from typing import Any
 
@@ -22,14 +20,10 @@ class TimeLimitedAIOLDAPConnection(AIOLDAPConnection):
     Keyword Args:
         expires: The number of seconds after which the connection will expire.
         loop: The asyncio event loop.
+
     """
 
-    def __init__(
-        self,
-        client: bonsai.LDAPClient,
-        expires: int = 20,
-        loop=None
-    ) -> None:
+    def __init__(self, client: bonsai.LDAPClient, expires: int = 20, loop=None) -> None:
         super().__init__(client, loop=loop)
         self.expires = expires
         self.create_time = time.time()
@@ -53,6 +47,7 @@ class TimeLimitedAIOConnectionPool(AIOConnectionPool):
         minconn: The minimum number of connections to keep in the pool.
         maxconn: The maximum number of connections to keep in the pool.
         loop: The asyncio event loop.
+
     """
 
     def __init__(
@@ -62,12 +57,12 @@ class TimeLimitedAIOConnectionPool(AIOConnectionPool):
         minconn: int = 1,
         maxconn: int = 10,
         loop=None,
-        **kwargs: Any
+        **kwargs: Any,
     ) -> None:
         super().__init__(client, minconn, maxconn, loop=loop, **kwargs)
         self.settings = settings
 
-    async def get(self) -> AIOLDAPConnection:
+    async def get(self) -> AIOLDAPConnection:  # type: ignore[override]
         """
         Get a connection from the pool.  If a connection has expired, close it
         and create a new connection, then return the new connection.
@@ -78,10 +73,12 @@ class TimeLimitedAIOConnectionPool(AIOConnectionPool):
 
         Returns:
             A connection from the pool.
+
         """
         async with self._lock:
             if self._closed:
-                raise ClosedPool("The pool is closed.")
+                msg = "The pool is closed."
+                raise ClosedPool(msg)
             await self._lock.wait_for(lambda: not self.empty or self._closed)
             try:
                 conn = self._idles.pop()
@@ -91,11 +88,12 @@ class TimeLimitedAIOConnectionPool(AIOConnectionPool):
                         is_async=True, loop=self._loop, **self._kwargs
                     )
                 else:
-                    raise EmptyPool("Pool is empty.") from None
+                    msg = "Pool is empty."
+                    raise EmptyPool(msg) from None
             if conn.is_expired:
                 logger.info(
-                    'ldap.pool.connection.recycle',
-                    lifetime_seconds=self.settings.ldap_pool_connection_lifetime_seconds
+                    "ldap.pool.connection.recycle",
+                    lifetime_seconds=self.settings.ldap_pool_connection_lifetime_seconds,
                 )
                 # Does this need to be awaited?
                 conn.close()

@@ -12,8 +12,6 @@ version:
 	@echo ${VERSION}
 
 docs:
-	@echo "Installing docs dependencies ..."
-	@pip install -r doc/requirements.txt
 	@echo "Generating docs..."
 	@cd doc && rm -rf build && make json
 	@cd doc/build && tar zcf docs.tar.gz json
@@ -25,16 +23,15 @@ clean:
 	find . -name "*.pyc" -exec rm '{}' ';'
 
 dist: clean
-	@python setup.py sdist
-	@python setup.py bdist_wheel --universal
+	@uv build --sdist --wheel
 
 build:
-	docker build -t ${PACKAGE}:${VERSION} .
+	docker build --sbom=true --provenance=true -t ${PACKAGE}:${VERSION} .
 	docker tag ${PACKAGE}:${VERSION} ${PACKAGE}:latest
 	docker image prune -f
 
 force-build:
-	docker build --no-cache -t ${PACKAGE}:${VERSION} .
+	docker build --sbom=true --provenance=true --no-cache -t ${PACKAGE}:${VERSION} .
 	docker tag ${PACKAGE}:${VERSION} ${PACKAGE}:latest
 
 tag:
@@ -49,37 +46,39 @@ pull:
 	docker pull ${DOCKER_REGISTRY}/${PACKAGE}:${VERSION}
 
 dev:
-	docker-compose up
+	docker compose up
 
 dev-detached:
-	docker-compose up -d
+	docker compose up -d
 
 devdown:
-	docker-compose down
+	docker compose down
 
 restart:
-	docker-compose restart nginx-ldap-auth-service
+	docker compose restart nginx-ldap-auth-service
 
 exec:
 	docker exec -it nginx-ldap-auth-service /bin/sh
+
+scout:
+	docker scout cves --only-severity=critical,high ${PACKAGE}:${VERSION}
 
 release: dist
 	@bin/release.sh
 	@twine upload dist/*
 
 log:
-	docker-compose logs -f nginx-ldap-auth-service
+	docker compose logs -f nginx-ldap-auth-service
 
 logall:
-	docker-compose logs -f
+	docker compose logs -f
+
+compile: uv.lock
+	@uv pip compile --extra=docs pyproject.toml -o requirements.txt
 
 docker-clean:
 	docker stop $(shell docker ps -a -q)
 	docker rm $(shell docker ps -a -q)
-
-docker-destroy: docker-clean
-	docker rmi -f $(shell docker images -q | uniq)
-	docker image prune -f; docker volume prune -f; docker container prune -f
 
 .PHONY: list build force-build
 list:
