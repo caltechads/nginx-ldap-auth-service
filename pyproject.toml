@@ -1,5 +1,5 @@
 [project]
-name = "nginx-ldap-auth-service"
+name = "nginx_ldap_auth_service"
 version = "2.1.0"
 description = "A FastAPI app that authenticates users via LDAP and sets a cookie for nginx"
 readme = "README.md"
