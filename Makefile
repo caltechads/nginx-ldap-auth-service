@@ -26,12 +26,12 @@ dist: clean
 	@uv build --sdist --wheel
 
 build:
-	docker build --sbom=true --provenance=true -t ${PACKAGE}:${VERSION} .
+	docker build --platform linux/amd64,linux/arm64 --sbom=true --provenance=true -t ${PACKAGE}:${VERSION} .
 	docker tag ${PACKAGE}:${VERSION} ${PACKAGE}:latest
 	docker image prune -f
 
 force-build:
-	docker build --sbom=true --provenance=true --no-cache -t ${PACKAGE}:${VERSION} .
+	docker build --platform linux/amd64,linux/arm64 --sbom=true --provenance=true --no-cache -t ${PACKAGE}:${VERSION} .
 	docker tag ${PACKAGE}:${VERSION} ${PACKAGE}:latest
 
 tag:
