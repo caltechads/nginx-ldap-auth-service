@@ -60,8 +60,6 @@ Here is an example ``docker-compose.yml`` file that runs ``nginx`` and
 
 .. code-block:: yaml
 
-    version: '3'
-
     services:
       nginx:
         image: nginx:latest

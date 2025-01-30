@@ -20,6 +20,7 @@ Workflow is pretty straightforward:
 #. Checkout a new branch, named for yourself and a summary of what you're trying to accomplish.
 #. Make a change
 #. Make sure all tests passed
+#. Update the documentation and ensure that it looks correct.
 #. Commit changes to your branch
 #. Merge your changes into master and push.
 
@@ -27,27 +28,31 @@ Workflow is pretty straightforward:
 Preconditions for working on nginx-ldap-auth-service
 ----------------------------------------------------
 
-You'll need Python 3.11.3 installed.  We recommend using ``pyenv`` to manage
-your Python installations.  You'll also need ``pip`` and ``wheel`` installed.
+You'll need some version of Python 3.11 installed, and ``uv`` and ``pip``.
 
 .. code-block:: shell
 
    $ cd nginx-ldap-auth-service
-   $ pyenv virtualenv 3.11.3 nginx-ldap-auth-service
-   $ pip install --upgrade pip wheel
-   $ pyenv local nginx-ldap-auth-service
+   $ pip install uv
+   $ uv venv
+   $ source .venv/bin/activate
+   $ uv sync --extra=docs
 
-After that please install libraries required for development:
+After that please install libraries into your ``uv`` tool folder that are
+required for development:
 
 .. code-block:: shell
 
-   $ pip install -r requirements.dev.txt
+   $ uv tool install ruff
+   $ uv tool install twine
+   $ uv tool install bumpversion
 
 Precondiions for running the docker-compose stack in development
 ----------------------------------------------------------------
 
-Since ``nginx-ldap-auth-service`` authenticates against an LDAP or Active Directory service, you
-will need to provide one.  The LDAP/AD server you use needs these features:
+Since ``nginx-ldap-auth-service`` authenticates against an LDAP or Active
+Directory service, you will need to provide one.  The LDAP/AD server you use
+needs these features:
 
 * It must support ``STARTTLS``
 * It must support ``LDAPv3``
@@ -101,6 +106,6 @@ service::
 Use your dev environment
 ------------------------
 
-You should how be able to browse to https://localhost:8443/ and be redirected to
+You should how be able to browse to https://localhost/ and be redirected to
 the login page.
 

@@ -53,38 +53,47 @@ if you have multiple ``nginx`` servers all using the same
     proxy to ``nginx-ldap-auth-service``.  If you set them in the ``server``
     block, they will be ignored.
 
-X-Auth-Realm
+CSRF Cookie in the /auth location [required]
 
-    The title for the login form.  This goes in the ``location`` block for the
-    ``/auth`` location. Defaults to the value of
-    :py:attr:`nginx_ldap_auth.settings.Settings.auth_realm` for the
-    ``nginx-ldap-auth-service`` instance.
+    In order for the login page to work, we need to pass the session cookie to
+    the auth service.  See :envvar:`CSRF_COOKIE_NAME` for more details on what
+    the name of the CSRF cookie will be for you.
+
+    Here's an example of how to set the cookie in the ``/auth`` location:
 
     Example:
 
     .. code-block:: nginx
-        :emphasize-lines: 3
+        :emphasize-lines: 4
 
         location /auth {
             proxy_pass http://nginx-ldap-auth-service:8888/auth;
-            proxy_set_header X-Auth-Realm "My Login Form";
+            proxy_set_header Cookie mycookie_csrf=$cookie_mycookie_csrf;
+
+            # other lines omitted for brevity
         }
+
 
 X-Cookie-Name
 
-    The name of the session cookie.  This goes in the ``location`` block for the
-    ``/auth`` and ``/check-auth`` locations. Defaults to the value of
-    :py:attr:`nginx_ldap_auth.settings.Settings.cookie_name` for the
-    ``nginx-ldap-auth-service`` instance.
+    The name of the session cookie.  Either set this header or set the
+    :envvar:`COOKIE_NAME` environment variable.  If ``X-Cookie-Name`` is set, it
+    will override the value of :envvar:`COOKIE_NAME`.
 
-    Changing the cookie name with ``X-Cookie-Name`` implies some other ``nginx``
-    configuration changes also, so all the highlighted lines below are things you
-    need to change if you change the cookie name.
+    The ``proxy_set_header X-Cookie-Name`` line goes in the ``location`` block
+    for the ``/auth`` and ``/check-auth`` locations.
+
+    .. important::
+
+        Whether or not you change the cookie name from its default of ``nginxauth``,
+        you'll need the ``proxy_set_header Cookie`` and ``proxy_cache_key`` lines
+        below.  Change "mycookie" to whatever you set :envvar:`COOKIE_NAME` to in
+        all the places it occurs.
 
     Example:
 
     .. code-block:: nginx
-        :emphasize-lines: 3,18,19,20
+        :emphasize-lines: 3,4,19,20,21
 
         location /auth {
             proxy_pass http://nginx-ldap-auth-service:8888/auth;
@@ -114,9 +123,10 @@ X-Cookie-Name
 X-Cookie-Domain
 
     The domain for the session cookie.  This goes in the ``location`` block for
-    the ``/auth`` and ``/check-auth`` locations. Defaults to the value of
-    :py:attr:`nginx_ldap_auth.settings.Settings.cookie_domain` for the
-    ``nginx-ldap-auth-service`` instance.
+    the ``/auth`` and ``/check-auth`` locations.  If you don't specify this
+    header, the value of the domain will be that set for :envvar:`COOKIE_DOMAIN`.
+    If ``X-Cookie-Domain`` is set, it will override the value of
+    :envvar:`COOKIE_DOMAIN`.
 
     Example:
 
@@ -136,6 +146,25 @@ X-Cookie-Domain
             # other lines omitted for brevity
 
             proxy_set_header X-Cookie-Domain ".example.com";
+        }
+
+X-Auth-Realm
+
+    The title for the login form.  This goes in the ``location`` block for the
+    ``/auth`` location. Defaults to the value of
+    :py:attr:`nginx_ldap_auth.settings.Settings.auth_realm` for the
+    ``nginx-ldap-auth-service`` instance.  You should either set it here in
+    ``nginx.conf`` or with the :envvar:`AUTH_REALM` environment variable, but
+    not both.
+
+    Example:
+
+    .. code-block:: nginx
+        :emphasize-lines: 3
+
+        location /auth {
+            proxy_pass http://nginx-ldap-auth-service:8888/auth;
+            proxy_set_header X-Auth-Realm "My Login Form";
         }
 
 .. _nginx-ldap-auth-service-env:
@@ -213,6 +242,11 @@ These settings configure the login form and session handling.
 .. envvar:: COOKIE_NAME
 
     The name of the cookie to use for the session. Defaults to ``nginxauth``.
+
+.. envvar:: CSRF_COOKIE_NAME
+
+    The name of the cookie to use for the CSRF cookie. Defaults to whatever you
+    set :envvar:`COOKIE_NAME` to with ``_csrf`` appended.
 
 .. envvar:: COOKIE_DOMAIN
 

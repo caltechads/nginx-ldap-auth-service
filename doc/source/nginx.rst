@@ -39,6 +39,7 @@ There four bits to this configuration:
 
 Below is a minimal example configuration for a site that uses LDAP to
 authenticate users that want to access the site whose root page is ``/``.
+You need everything there in order to make it work.
 
 Things to note:
 
@@ -52,12 +53,24 @@ Things to note:
   and always use the paths ``/auth/login`` and ``/auth/logout``, and those paths
   are hard-coded into the login form; you can't change them.   The ``/auth``
   location handles the proxying of those paths to ``nginx-ldap-auth-service``.
+- If you set the :envvar:`COOKIE_NAME` environment variable in the
+  ``nginx_ldap_auth_service`` service, you need to change the ``proxy_set_header
+  Cookie nginxauth`` line in the ``/auth`` location to match that value,
+  changing ``nginxauth`` to whatever you set it to in all places in that line.
+  You will also need to do the same things to the ``proxy_set_header Cookie``
+  and ``proxy_cache_key`` lines in the ``/check-auth`` location.  Finally, you
+  will have to change the ``proxy_set_header Cookie nginxauth_conf`` line
+  in the ``/auth`` location to match the value of :envvar:`COOKIE_NAME` with
+  ``_csrf`` appended, again in all places in that line.
+- If you set the :envvar:`CSRF_COOKIE_NAME`, you will have to change the
+  ``proxy_set_header Cookie nginxauth_conf`` line in the ``/auth`` location to
+  match that value with in all places in that line.
 - See :ref:`nginx_header_config` for information on how to configure
   ``nginx-ldap-auth-service`` behavior using custom headers.
 
 
 .. code-block:: nginx
-    :emphasize-lines: 12,23,27,28,31,32,33,34,35,36,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64
+    :emphasize-lines: 12,23,28,29,30,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68
 
     user nginx;
     worker_processes auto;
@@ -75,7 +88,8 @@ Things to note:
       default_type application/octet-stream;
 
       server {
-        listen 443 ssl http2;
+        listen 443 ssl;
+        http2 on;
 
         ssl_certificate /certs/localhost.crt;
         ssl_certificate_key /certs/localhost.key;
@@ -94,6 +108,9 @@ Things to note:
             proxy_set_header Host $host;
             proxy_set_header X-Real-IP $remote_addr;
             proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+            # We need to pass in the CSRF cookie we set in the login code so
+            # that we can validate it
+            proxy_set_header Cookie nginxauth_csrf=$cookie_nginxauth_csrf;
         }
 
         location /check-auth {

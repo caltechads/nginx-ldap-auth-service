@@ -160,9 +160,11 @@ async def login(
     service: str = "/",
 ) -> HTMLResponse | RedirectResponse:
     """
-    If the user is already logged in, redirect to the URI named by the ``service``,
-    query paremeter, defaulting to ``/`` if that is not present.  Otherwise, render
-    the login page.
+    If the user is already logged in -- they have a session cookie, the session
+    the cookie points to exists, and the "username" key in the session exists --
+    redirect to the URI named by the ``service``, query paremeter, defaulting to
+    ``/`` if that is not present.  Otherwise, render the login page with a fresh
+    CSRF token, storing ``service`` in the login form as a hidden field.
 
     If the header ``X-Auth-Realm`` is set, use that as the title for the login
     page.  Otherwise use
@@ -221,14 +223,21 @@ async def login_handler(
     csrf_protect: Annotated[CsrfProtect, Depends()],
 ) -> HTMLResponse | RedirectResponse:
     """
-    Process our user's login request.  If authentication is successful, redirect
-    to the value of the ``service`` hidden input field on our form.
-
-    If authentication fails, display the login form again.
+    Process our user's login request.  Validate the CSRF token from the login form,
+    and attempt to bind to our LDAP server with the supplied username and password.
+    If authentication is successful, redirect to the value of the ``service``
+    hidden input field on our form.  If authentication fails, display the login
+    form again.
 
     If the header ``X-Auth-Realm`` is set, use that as the title for the login
     page.  Otherwise use
     :py:attr:`nginx_ldap_auth.settings.Settings.auth_realm`.
+
+    Side Effects:
+        If authentication is successful, the user's username is stored in the
+        session.
+
+        No matter what, the CSRF cookie is unset to prevent token reuse.
 
     Args:
         request: The request object
@@ -259,7 +268,8 @@ async def login_handler(
 @app.get("/auth/logout", response_model=None, name="logout")
 async def logout(request: Request) -> RedirectResponse:
     """
-    Log the user out and redirect to the login page.
+    Log the user out by invalidating the sesision, and redirect them to the
+    login page.
 
     Args:
         request: The request object
@@ -283,9 +293,8 @@ async def check_auth(request: Request, response: Response) -> dict[str, Any]:
     200 OK, otherwise return 401 Unauthorized.
 
     The user is authorized if the cookie exists, the session the cookie refers
-    to exists, and the ``username`` key in the settings is set.
-
-    Additionally, the user must still exist in LDAP, and if
+    to exists, and the ``username`` key in the settings is set.  Additionally,
+    the user must still exist in LDAP, and if
     :py:attr:`nginx_ldap_auth.settings.Settings.ldap_authorization_filter` is
     not ``None``, the user must also match the filter.
 

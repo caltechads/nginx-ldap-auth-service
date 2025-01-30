@@ -3,7 +3,7 @@ Installation
 
 .. highlight:: bash
 
-:Requirements: **Python 3.x >= 3.8**
+:Requirements: **Python 3.x >= 3.11**
 
 To install the latest released version::
 
@@ -39,7 +39,6 @@ You can also run ``nginx-ldap-auth-service`` from Docker Hub::
 Or use ``docker-compose``. Create a ``docker-compose.yml`` file with the
 following contents::
 
-    version: '3.7'
     services:
       nginx_ldap_auth_service:
         image: caltechads/nginx-ldap-auth-service:latest
