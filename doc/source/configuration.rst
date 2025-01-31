@@ -11,8 +11,8 @@ Configuration Overview
 decreasing order of precedence:
 
 #. Command line options for ``nginx-ldap-auth start``
-#. headers set in the location blocks of the ``nginx`` config file
-#. the environment
+#. Headers set in the location blocks of the ``nginx`` config file
+#. Environment variables
 
 Not all configuration options are available in all places.
 
@@ -188,6 +188,7 @@ The following environment variables are available to configure
     * :envvar:`LDAP_PASSWORD`,
     * :envvar:`LDAP_BASEDN`
     * :envvar:`SECRET_KEY`.
+    * :envvar:`CSRF_SECRET_KEY`.
 
     You should also look at these variables to see whether their defaults work
     for you:
@@ -265,7 +266,11 @@ These settings configure the login form and session handling.
 
 .. envvar:: SECRET_KEY
 
-    **Required** The secret key to use for the session. Defaults to ``SESSION_SECRET``.
+    **Required** The secret key to use for the session.
+
+.. envvar:: CSRF_SECRET_KEY
+
+    **Required** The secret key to use for the CSRF cookie.
 
 .. envvar:: SESSION_BACKEND
 

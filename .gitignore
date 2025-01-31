@@ -123,3 +123,4 @@ twistd.pid
 tags
 supervisord.pid
 requirements.txt.new
+docs.tar.gz
