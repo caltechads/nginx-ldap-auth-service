@@ -79,9 +79,6 @@ include-package-data = true
 [tool.setuptools.packages.find]
 where = ["."]
 
-[tool.setuptools.package-data]
-pkgname = ["py.typed"]
-
 [tool.mypy]
 exclude = "(^build/.*$|^doc/.*\\.py$|test_.*\\.py$)"
 plugins = ["pydantic.mypy"]

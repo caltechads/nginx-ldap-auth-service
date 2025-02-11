@@ -2,3 +2,6 @@ include *.txt
 include *.md
 graft etc
 include Makefile
+include nginx_ldap_auth/app/templates/*
+include nginx_ldap_auth/app/static/*
+include nginx_ldap_auth/py.typed
