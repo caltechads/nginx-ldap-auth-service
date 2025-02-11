@@ -261,10 +261,31 @@ class User(BaseModel):
 
     @classmethod
     def parse_ldap(cls, data: LDAPObject) -> "User":
+        """
+        Parse the LDAP response, and extract the uid and full name from
+        the LDAP server to use in constructing this class.
+
+        We use
+        :py:attr:`nginx_ldap_auth.settings.Settings.ldap_username_attribute` to
+        determine which LDAP attribute on ``data`` holds our :py:attr:`uid` value, and
+        :py:attr:`nginx_ldap_auth.settings.Settings.ldap_full_name_attribute` to
+        determine which LDAP attribute holds our :py:attr:`full_name` value.
+
+        Args:
+            data: the raw LDAP data
+
+        Returns:
+            A configured :py:class:`User` object
+
+        """
+        settings = Settings()
+        username_attribute = settings.ldap_username_attribute
+        fullname_attribute = settings.ldap_full_name_attribute
         kwargs = {
-            "uid": data["uid"][0],
-            "full_name": data["cn"][0],
+            "uid": data[username_attribute][0],
+            "full_name": data[fullname_attribute][0],
         }
+        logger.info("user.parse_ldap", **kwargs)
         return cls(**kwargs)
 
 
