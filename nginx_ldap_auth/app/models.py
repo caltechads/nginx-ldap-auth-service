@@ -40,6 +40,8 @@ class UserManager:
         client.set_cert_policy("never")
         client.set_ca_cert(None)
         client.set_ca_cert_dir(None)
+        client.ignore_referrals = self.settings.ldap_disable_referrals
+        client.set_server_chase_referrals(not self.settings.ldap_disable_referrals)
         client.set_async_connection_class(TimeLimitedAIOLDAPConnection)
         return client
 
@@ -67,6 +69,13 @@ class UserManager:
         """
         Authenticate a user against the LDAP server.
 
+        If :py:attr:`nginx_ldap_auth.settings.Settings.ldap_user_basedn` is set,
+        we will prepend the username with that value to create the DN to bind
+        with like so: "{username}{ldap_user_base_dn}.  Otherwise, we will use
+        the value of
+        :py:attr:`nginx_ldap_auth.settings.Settings.ldap_username_attribute` to
+        create the DN as ``{username_attribute}={username},{ldap_basedn}``.
+
         Args:
             username: the username to authenticate
             password: the password to authenticate with
@@ -78,17 +87,30 @@ class UserManager:
             ``True`` if the user is authenticated, ``False`` otherwise
 
         """
-        if not self.pool:
-            await self.create_pool()
-        dn = (
-            f"{self.settings.ldap_username_attribute}={username},"
-            f"{self.settings.ldap_basedn}"
-        )
+        if self.settings.ldap_user_basedn:
+            # This is AD and we need to use the userPrincipalName
+            dn = f"{username}{self.settings.ldap_user_basedn}"
+        else:
+            dn = (
+                f"{self.settings.ldap_username_attribute}={username},"
+                f"{self.settings.ldap_basedn}"
+            )
         client = self.client()
         client.set_credentials("SIMPLE", user=dn, password=password)
+        logger.info(
+            "ldap.authenticate",
+            dn=dn,
+            uri=self.settings.ldap_uri,
+        )
         try:
             await client.connect(is_async=True)
-        except AuthenticationError:
+        except AuthenticationError as e:
+            logger.error(
+                "ldap.authenticate.error.invalid_credentials",
+                dn=dn,
+                uri=self.settings.ldap_uri,
+                exc_info=str(e),
+            )
             return False
         except LDAPError:
             logger.exception("ldap.authenticate.exception", uid=username)

@@ -73,6 +73,14 @@ class Settings(BaseSettings):
     ldap_disable_referrals: bool = False
     #: The base DN under which to perform searches
     ldap_basedn: str
+    #: The base DN to append to the user's username when binding.  This is only
+    #: important for Active Directory, where we need to use the value of
+    #: ``userPrincipalName`` (typically the user's email address) as the
+    #: username intead of the dn which would be built as
+    #: ``sAMAccountName=user,{LDAP_BASEDN}``.  Include the ``@`` at the begining
+    #: of the string.  If this is set, the binddn will be
+    #: ``{username}{ldap_user_basedn}``
+    ldap_user_basedn: str | None = None
     #: The LDAP attribute to use as the username when searching for a user
     ldap_username_attribute: str = "uid"
     #: The LDAP attribute to use as the full name when getting search results

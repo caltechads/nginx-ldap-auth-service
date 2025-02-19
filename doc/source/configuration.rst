@@ -23,6 +23,13 @@ Not all configuration options are available in all places.
 
         $ nginx-ldap-auth settings
 
+.. note::
+
+    Active Directory works somewhat differently than other LDAP servers.
+
+    See the "Active Directory" section in :ref:`nginx-ldap-auth-service-env`
+    for more information.
+
 Command Line
 ------------
 
@@ -200,6 +207,25 @@ The following environment variables are available to configure
     * :envvar:`AUTH_REALM`
     * :envvar:`SESSION_MAX_AGE`
 
+LDAP (389, openldap, etc.)
+
+    If you're using an LDAP server that's not Active Directory, and you're using
+    posixAccount objects, the :envvar:`LDAP_USERNAME_ATTRIBUTE`  and
+    :envvar:`LDAP_FULL_NAME_ATTRIBUTE` defaults will probably just work for you.
+    You will still need to set/look at the other LDAP settings.
+
+Active Directory
+
+    If you use Active Directory as your LDAP server, you should set the
+    :envvar:`LDAP_USERNAME_ATTRIBUTE` to ``sAMAccountName`` and the
+    :envvar:`LDAP_FULL_NAME_ATTRIBUTE` to ``cn``.   You will probably
+    also need to set :envvar:`LDAP_USER_BASEDN` to the base DN of your users
+    which is probably not the same as your :envvar:`LDAP_BASEDN`.  Auth for
+    normal users in AD is sometimes done with the ``userPrincipalName`` attribute
+    which is the user's email address, thus you would set :envvar:`LDAP_USER_BASEDN`
+    to ``@{__YOUR_EMAIL_DOMAIN__}``, (e.g. ``@example.com``) and the bare username
+    will be prepended to that to form the bind DN for the user.
+
 Web Server
 ^^^^^^^^^^
 
@@ -300,8 +326,8 @@ These settings configure the LDAP server to use for authentication.
 
 .. envvar:: LDAP_BINDDN
 
-    **Required**. The DN to use to bind to the LDAP server for doing our user
-    and authorization searches.
+    **Required**. The DN of a privileged user in your LDAP/AD server that can be
+    used to to bind to the LDAP server for doing our user and authorization searches.
 
 .. envvar:: LDAP_PASSWORD
 
@@ -318,7 +344,32 @@ These settings configure the LDAP server to use for authentication.
 
 .. envvar:: LDAP_BASEDN
 
-    **Required** The base DN to use for our LDAP searches.
+    **Required** The base DN to use for our LDAP searches that find users, and to
+    construct the DN for the user to bind with, unless ``LDAP_USER_BASEDN`` is also
+    set (see below).  For authentication, the user's DN will be constructed as
+    ``{LDAP_USERNAME_ATTRIBUTE}={username},{LDAP_BASEDN}``.
+
+.. envvar:: LDAP_USER_BASEDN
+
+    The base DN to append to the user's username when binding.  This is only
+    important for Active Directory, where we may need to use the value of
+    ``userPrincipalName`` (typically the user's email address) as the username
+    intead of the usual LDAP style dn which would be constructed as
+    ``sAMAccountName=user,{LDAP_BASEDN}``.  Include the ``@`` at the beginning
+    of the value.  The resulting bind DN will be ``{username}{LDAP_USER_BASEDN}``.
+
+    Defaults to ``None``.
+
+    Example:
+
+    .. code-block:: bash
+
+        export LDAP_USER_BASEDN="@example.com"
+
+    This will cause the bind DN to be ``user@example.com``
+
+    This envvar is normally unset, and if so, the bind DN will be constructed
+    as ``{LDAP_USERNAME_ATTRIBUTE}={username},{LDAP_BASEDN}``.
 
 .. envvar:: LDAP_USERNAME_ATTRIBUTE
 
@@ -333,7 +384,9 @@ These settings configure the LDAP server to use for authentication.
     The LDAP search filter to use when searching for users. Defaults to
     ``{username_attribute}={username}``, where ``{username_attribute}`` is the
     value of :envvar:`LDAP_USERNAME_ATTRIBUTE` and ``{username}`` is the
-    username provided by the user.  See :py:attr:`nginx_ldap_auth.settings.Settings.ldap_get_user_filter` for more details.
+    username provided by the user.  See
+    :py:attr:`nginx_ldap_auth.settings.Settings.ldap_get_user_filter` for more
+    details.
 
     The filter will within the base DN given by :envvar:`LDAP_BASEDN` and with
     scope of ``SUBTREE``.
