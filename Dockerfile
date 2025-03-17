@@ -1,4 +1,4 @@
-FROM python:3.11.11-alpine3.21 AS build
+FROM python:3.12-alpine3.21 AS build
 
 # This part builds the virtual environment and installs the system dependencies
 # needed to do so.
@@ -27,7 +27,7 @@ COPY uv.lock /_lock/
 RUN cd /_lock && \
     uv sync --frozen --no-dev
 
-FROM python:3.11.11-alpine3.21
+FROM python:3.12-alpine3.21
 
 ENV HISTCONTROL=ignorespace:ignoredups  \
     IPYTHONDIR=/etc/ipython             \
