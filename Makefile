@@ -23,7 +23,7 @@ clean:
 	find . -name "*.pyc" -exec rm '{}' ';'
 
 dist: clean
-	@uv build --sdist --wheel
+	@uv build --sdist
 
 build:
 	docker build --platform linux/amd64,linux/arm64 --sbom=true --provenance=true -t ${PACKAGE}:${VERSION} .
