@@ -174,6 +174,25 @@ X-Auth-Realm
             proxy_set_header X-Auth-Realm "My Login Form";
         }
 
+X-Authenticated-User
+
+    The username of the authenticated user from ``nginx-ldap-auth-service``.
+    This goes in the ``location`` block for your app's location.  This is used
+    to pass the authenticated username back to your application so that it can
+    be used for provisioning users or other purposes.  This is not required.  be
+    used for authorization checks.
+
+    Example:
+
+    .. code-block:: nginx
+        :emphasize-lines: 3,4
+
+        location / {
+            auth_request /check-auth;
+            auth_request_set $auth_user $upstream_http_x_authenticated_user;
+            proxy_set_header X-Authenticated-User $auth_user;
+        }
+
 .. _nginx-ldap-auth-service-env:
 
 Environment
