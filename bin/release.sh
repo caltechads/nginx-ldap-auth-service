@@ -23,7 +23,7 @@ if test $(git rev-parse --abbrev-ref HEAD) = "master"; then
             echo "Sleeping 3 seconds to allow the build push to trigger the CodePipeline ..."
             sleep 3
             echo "Pushing master to origin ..."
-            git push origin master
+            git push --tags origin master
         else
             echo "Last commit was not a bumpversion; aborting."
             echo "Last commit message: ${MSG}"

@@ -1,4 +1,4 @@
 CWD=$(pwd)
-if [[ ! $CWD == *"$VIRTUAL_ENV_PROMPT"* ]]; then
+if [[ ! $CWD == *"nginx-ldap-auth-service"* ]]; then
     deactivate
 fi

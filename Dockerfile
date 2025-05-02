@@ -1,11 +1,12 @@
-FROM python:3.12-alpine3.21 AS build
+FROM python:3.13-alpine3.21 AS build
 
 # This part builds the virtual environment and installs the system dependencies
 # needed to do so.
 
-ENV UV_PROJECT_ENVIRONMENT=/ve
-
-ENV LC_ALL=en_US.utf8 LANG=en_US.utf8 PYCURL_SSL_LIBRARY=nss
+ENV UV_PROJECT_ENVIRONMENT=/ve \
+    UV_COMPILE_BYTECODE=1      \
+    UV_LINK_MODE=copy          \
+    UV_PYTHON_DOWNLOADS=never
 
 RUN apk update && \
     apk upgrade && \
@@ -18,29 +19,25 @@ RUN apk update && \
         python3-dev \
         libxml2-dev \
         libxslt-dev \
-        openldap-dev \
-    && \
-    /usr/local/bin/pip install --upgrade uv setuptools pip wheel
+        openldap-dev
 
-COPY pyproject.toml /_lock/
-COPY uv.lock /_lock/
-RUN cd /_lock && \
-    uv sync --frozen --no-dev
+RUN --mount=type=cache,target=/uv-cache \
+    --mount=from=ghcr.io/astral-sh/uv,source=/uv,target=/bin/uv \
+    --mount=type=bind,source=pyproject.toml,target=pyproject.toml \
+    --mount=type=bind,source=uv.lock,target=uv.lock \
+    uv --cache-dir=/uv-cache sync --frozen --no-install-project
 
-FROM python:3.12-alpine3.21
+FROM python:3.13-alpine3.21
 
 ENV HISTCONTROL=ignorespace:ignoredups  \
-    IPYTHONDIR=/etc/ipython             \
-    LANG=en_US.UTF-8                    \
-    LANGUAGE=en_US.UTF-8                \
-    LC_ALL=en_US.UTF-8                  \
-    # Disable the pip cache to reduce layer size.
-    PIP_NO_CACHE_DIR=1                  \
+    # Add the venv's binaries, and the /app folder, to the PATH.
+    PATH=/ve/bin:/app:$PATH             \
     PYCURL_SSL_LIBRARY=nss              \
-    # This env var overrides other system timezone settings.
-    TZ=America/Los_Angeles              \
+    # Tell uv where the venv is, and to always copy instead of hardlink, which is needed for a mounted uv cache.
+    UV_PROJECT_ENVIRONMENT=/ve          \
+    UV_LINK_MODE=copy                   \
+    # Tell python which venv to use.
     VIRTUAL_ENV=/ve
-
 
 RUN apk update && \
     apk upgrade && \
@@ -59,15 +56,16 @@ RUN apk update && \
       -keyout /certs/server.key \
       -out /certs/server.crt && \
     chown app:app /certs/* && \
-    pip install --upgrade setuptools pip
+    pip install --upgrade uv pip setuptools
 
 COPY --from=build --chown=app:app /ve /ve
 ENV PATH=/ve/bin:$PATH PYTHONPATH=/app
 
-#RUN pip uninstall -y setuptools
-
 COPY . /app
 WORKDIR /app
+
+RUN --mount=type=cache,target=/uv-cache \
+    uv --cache-dir=/uv-cache sync --frozen
 
 USER app
 
