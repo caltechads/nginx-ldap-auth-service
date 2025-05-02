@@ -18,6 +18,10 @@ from nginx_ldap_auth.types import LDAPObject
 
 
 class UserManager:
+    """
+    Manage users in the LDAP directory.
+    """
+
     #: The model class for users
     model: ClassVar[type["User"]]
 
@@ -261,6 +265,11 @@ class UserManager:
 
 
 class User(BaseModel):
+    """
+    Used to represent a user in the LDAP directory.  It is constructed from the
+    LDAP response, and is used to authenticate the user against the LDAP server.
+    """
+
     objects: ClassVar["UserManager"] = UserManager()
 
     #: The username of the user.
