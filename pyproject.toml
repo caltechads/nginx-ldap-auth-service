@@ -16,7 +16,8 @@ classifiers = [
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
-    "Development Status :: 3 - Alpha",
+    "Programming Language :: Python :: 3.13",
+    "Development Status :: 5 - Production/Stable",
     "Framework :: FastAPI",
     "Intended Audience :: Information Technology",
     "Intended Audience :: System Administrators",
@@ -50,11 +51,12 @@ nginx-ldap-auth = "nginx_ldap_auth.main:main"
 
 [tool.uv]
 python-preference = "only-system"
-dev-dependencies = [
-    "ipython>=7.23.0",
-]
+default-groups = ["docs"]
 
-[project.optional-dependencies]
+[dependency-groups]
+dev = [
+    "ipython>=8.0.1",
+]
 docs = [
   "Sphinx<8",
   "sphinx_rtd_theme == 2.0.0",
@@ -103,6 +105,14 @@ ignore_missing_imports = true
 module = "fastapi_csrf_protect.*"
 ignore_missing_imports = true
 
+[[tool.mypy.overrides]]
+module = "starlette.*"
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = "starlette.*"
+ignore_missing_imports = true
+
 [tool.ruff]
 # Same as Black.
 line-length = 88
@@ -110,76 +120,84 @@ indent-width = 4
 
 [tool.ruff.lint]
 select = ["ALL"]
+fixable = ["ALL"]
+unfixable = []
+dummy-variable-rgx = "^(_+|(_+[a-zA-Z0-9_]*[a-zA-Z0-9]+?))$"
 ignore = [
     #### modules
     "ANN", # flake8-annotations
     "COM", # flake8-commas
     "C90", # mccabe complexity
-    "DJ",  # django
     "EXE", # flake8-executable
     "T10", # debugger
     "TID", # flake8-tidy-imports
 
     #### specific rules
-    "D100",   # ignore missing docs
-    "D101",
-    "D102",
-    "D103",
-    "D104",
-    "D105",
-    "D106",
-    "D107",
-    "D200",
-    "D205",
-    "D212",
-    "D400",
-    "D401",
-    "D415",
-    "E402",   # false positives for local imports
-    "S603",   # ignore subprocess calls that do not check return code
-    "S607",   # ignore subprocess programs that are not absolute paths
-    "TRY003", # external messages in exceptions are too verbose
-    "T201",   # ignore print statements
-    "TD002",
-    "TD003",
-    "FIX002", # too verbose descriptions of todos
-    "SIM102", # combine nested ifs
-    "UP006",  # stop bugging me about modern type hints
-    "FBT001", # stop bugging me about booleans in function signatures
-    "FBT002", # stop bugging me about booleans in function signatures
-    "N818",   # stop bugging me about not ending my exceptions with "Error"
+    "CPY001",   # ignore missing copyright notices
+    "D100",     # Missing docstring in public module
+    "D102",     # Missing docstring in public method
+    "D103",     # Missing docstring in public function
+    "D104",     # Missing docstring in public package
+    "D105",     # Missing docstring in magic method
+    "D106",     # Missing docstring in nested class
+    "D107",     # ignore Missing docstring in __init__ method
+    "D200",     # One-line docstring should fit on one line
+    "D203",     # 1 blank required before class docstring
+    "D205",     # 1 blank line required between summary line and description
+    "D211",     # No blank lines allowed before class docstring
+    "D212",     # Multi-line docstring summary should start at the first line
+    "D400",     # First line should end with a period
+    "D401",     # First line of docstring should be in imperative mood
+    "D415",     # First line should end with a period, question mark, or exclamation point
+    "DOC201",   # Ignore missing "Return" section in docstring
+    "E402",     # false positives for local imports
+    "FIX002",   # Line contains "TODO", consider resolving the issue
+    "N818",     # stop bugging me about not ending my exceptions with "Error"
+    "PLC0415",  # Ignore imports that aren't at the top level. Sometimes that's needed to avoid circular imports.
+    "S603",     # ignore subprocess calls that do not check return code
+    "S607",     # ignore subprocess programs that are not absolute paths
+    "SIM102",   # combine nested ifs
+    "SLF001",   # Ignore access to attributes starting with a single _.
+    "TD002",    # Missing author in TODO; try: # TODO(<author_name>): ... or # TODO @<author_name>:
+    "TD003",    # Missing issue link on the line following this TODO
 ]
-
-# Allow fix for all enabled rules (when `--fix`) is provided.
-fixable = ["ALL"]
-unfixable = []
-
-# Allow unused variables when underscore-prefixed.
-dummy-variable-rgx = "^(_+|(_+[a-zA-Z0-9_]*[a-zA-Z0-9]+?))$"
 
 [tool.ruff.format]
 # Like Black, use double quotes for strings.
 quote-style = "double"
-
 # Like Black, indent with spaces, rather than tabs.
 indent-style = "space"
-
 # Like Black, respect magic trailing commas.
 skip-magic-trailing-comma = false
-
 # Like Black, automatically detect the appropriate line ending.
 line-ending = "auto"
-
-# Enable auto-formatting of code examples in docstrings. Markdown,
-# reStructuredText code/literal blocks and doctests are all supported.
-#
-# This is currently disabled by default, but it is planned for this
-# to be opt-out in the future.
+# Enable auto-formatting of code examples in docstrings.
 docstring-code-format = false
-
 # Set the line length limit used when formatting code snippets in
 # docstrings.
-#
-# This only has an effect when the `docstring-code-format` setting is
-# enabled.
 docstring-code-line-length = "dynamic"
+
+[tool.ruff.lint.pylint]
+# Django signal handlers use a lot of positional args.
+max-args = 10
+max-positional-args = 10
+
+[tool.vulture]
+# Configuration for vulture: https://github.com/jendrikseipp/vulture
+# Install in your virtual environment and run:
+# python -m vulture | tail -r | less
+# The below configuration tries to remove some false positives, but there are
+# still many, for example for model properties used only in templates.
+# See also:
+# https://adamj.eu/tech/2023/07/12/django-clean-up-unused-code-vulture/
+ignore_decorators = [
+  # pytest
+  "@pytest.fixture",
+]
+ignore_names = [
+]
+paths = [
+  "example",
+]
+min_confidence = 80
+sort_by_size = true
