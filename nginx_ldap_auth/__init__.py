@@ -1,4 +1,4 @@
-__version__: str = "2.1.5"
+__version__: str = "2.1.6"
 __author__: str = "Caltech IMSS ADS"
 __author_email__: str = "imss-ads-staff@caltech.edu"
 __description__: str = (
