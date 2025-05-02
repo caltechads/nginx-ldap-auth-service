@@ -6,6 +6,7 @@ nginx-ldap-auth-service
    :hidden:
    :caption: Overview
 
+   changelog
    installation
    running
    configuration
