@@ -45,7 +45,7 @@ elif settings.session_backend == "redis":
         prefix=settings.redis_prefix,
         gc_ttl=settings.session_max_age,
     )
-    redis_url = cast(AnyUrl, settings.redis_url)
+    redis_url = cast("AnyUrl", settings.redis_url)
     get_logger().info(
         "session.store",
         backend=settings.session_backend,
@@ -60,6 +60,12 @@ elif settings.session_backend == "redis":
 
 
 class CsrfSettings(BaseSettings):
+    """
+    Settings for CSRF protection. Used by the `fastapi-csrf-protect` library.
+
+    See: https://github.com/fastapi-csrf-protect/fastapi-csrf-protect
+    """
+
     #: The secret key to use for CSRF tokens
     secret_key: str = Field(validation_alias="CSRF_SECRET_KEY")
     #: We'll set the SameSite attribute on our CSRF cookies to this value

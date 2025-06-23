@@ -27,9 +27,9 @@ class LoginForm:
         Load data from request form.
         """
         form = await self.request.form()
-        self.username = cast(str, form.get("username"))
-        self.password = cast(str, form.get("password"))
-        self.service = cast(str, form.get("service", "/"))
+        self.username = cast("str", form.get("username"))
+        self.password = cast("str", form.get("password"))
+        self.service = cast("str", form.get("service", "/"))
 
     async def is_valid(self) -> bool:
         """
@@ -51,16 +51,16 @@ class LoginForm:
         """
         _logger = get_logger(self.request)
         if not self.username:
-            _logger.info("auth.failed.username")
+            _logger.info("auth.failed.no_username")
             self.errors.append("Username is required")
         if not self.password:
             _logger.info("auth.failed.no_password")
             self.errors.append("A valid password is required")
-        if user := await User.objects.get(cast(str, self.username)):
+        if user := await User.objects.get(cast("str", self.username)):
             # The user exists in LDAP
-            user = cast(User, user)
+            user = cast("User", user)
             # Ensure that the user is authorized to access this service
-            if not await User.objects.is_authorized(cast(str, self.username)):
+            if not await User.objects.is_authorized(cast("str", self.username)):
                 self.errors.append("You are not authorized to access this service.")
                 _logger.warning(
                     "auth.failed.not_authorized",
@@ -70,7 +70,7 @@ class LoginForm:
                     target=self.service,
                 )
             # Now try to authenticate the user
-            if await user.authenticate(cast(str, self.password)):
+            if await user.authenticate(cast("str", self.password)):
                 # The user has provided valid credentials
                 _logger.info(
                     "auth.success",
