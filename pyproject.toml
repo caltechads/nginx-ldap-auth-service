@@ -1,6 +1,6 @@
 [project]
 name = "nginx_ldap_auth_service"
-version = "2.1.6"
+version = "2.1.7"
 description = "A FastAPI app that authenticates users via LDAP and sets a cookie for nginx"
 readme = "README.md"
 requires-python = ">=3.11"
@@ -38,7 +38,7 @@ dependencies = [
     "python-dotenv>=1.0.1",
     "python-multipart>=0.0.6",
     "sentry-sdk>=2.20.0",
-    "starsessions[redis]>=2.1.6",
+    "starsessions[redis]>=2.1.7",
     "structlog>=23.2.0",
     "tabulate>=0.8.9",
     "uvicorn[standard]>=0.34.0",
