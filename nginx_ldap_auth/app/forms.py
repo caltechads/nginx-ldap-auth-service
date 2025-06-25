@@ -14,7 +14,7 @@ class LoginForm:
     The form class for the login form.
     """
 
-    def __init__(self, request: Request):
+    def __init__(self, request: Request) -> None:
         self.request: Request = request
         self.errors: list = []
         self.username: str | None = None

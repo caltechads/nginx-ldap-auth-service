@@ -1,4 +1,4 @@
-from typing import TypeAlias  # noqa: A005
+from typing import TypeAlias
 
 LDAPValue: TypeAlias = list[str]
 LDAPObject: TypeAlias = dict[str, LDAPValue]
