@@ -355,7 +355,7 @@ These settings configure the LDAP server to use for authentication.
 
 .. envvar:: LDAP_STARTTLS
 
-    Set to ``1`` or ``True`` to enable STARTTLS on our LDAP connections. Defaults to ``False``.
+    Set to ``0`` or ``False`` to disable STARTTLS on our LDAP connections. Defaults to ``True``.
 
 .. envvar:: LDAP_DISABLE_REFERRALS
 
