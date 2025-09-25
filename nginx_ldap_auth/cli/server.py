@@ -56,6 +56,12 @@ def print_settings():
     help="The path to the SSL certificate file.",
 )
 @click.option(
+    "--insecure",
+    default=lambda: os.environ.get("INSECURE", False),
+    type=bool,
+    help="If the server should run over HTTP instead of HTTPS.",
+)
+@click.option(
     "--workers",
     "-w",
     default=lambda: os.environ.get("WORKERS", 1),
@@ -76,11 +82,17 @@ def start(**kwargs):
         "host": kwargs["host"],
         "port": kwargs["port"],
         "reload": kwargs["reload"],
-        "ssl_keyfile": kwargs["keyfile"],
-        "ssl_certfile": kwargs["certfile"],
         "workers": kwargs["workers"],
-        "ssl_version": 2,
     }
+    if not kwargs["insecure"]:
+        # adding in SSL settings results in `uvicorn` running over HTTPS
+        # the SSL settings will bee ignored when insecure mode is enabled
+        ssl_kwargs = {
+            "ssl_keyfile": kwargs["keyfile"],
+            "ssl_certfile": kwargs["certfile"],
+            "ssl_version": 2,
+        }
+        uvicorn_kwargs |= ssl_kwargs
     if kwargs["env_file"]:
         uvicorn_kwargs["env_file"] = kwargs["env_file"]
     uvicorn.run("nginx_ldap_auth.app.main:app", **uvicorn_kwargs)
