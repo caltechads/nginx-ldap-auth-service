@@ -86,7 +86,7 @@ def start(**kwargs):
     }
     if not kwargs["insecure"]:
         # adding in SSL settings results in `uvicorn` running over HTTPS
-        # the SSL settings will bee ignored when insecure mode is enabled
+        # the SSL settings will be ignored when insecure mode is enabled
         ssl_kwargs = {
             "ssl_keyfile": kwargs["keyfile"],
             "ssl_certfile": kwargs["certfile"],
