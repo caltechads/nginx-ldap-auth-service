@@ -275,6 +275,10 @@ These settings configure the web server that ``nginx-ldap-auth-service`` runs,
 
     Set to ``1`` or ``True`` to enable debug mode. Defaults to ``False``.
 
+.. envvar:: INSECURE
+
+    Set to ``1`` or ``True`` to start the web server with TLS disabled. Defaults to ``False``.
+
 
 Login form and sessions
 ^^^^^^^^^^^^^^^^^^^^^^^
