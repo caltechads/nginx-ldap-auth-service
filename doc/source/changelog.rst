@@ -1,6 +1,30 @@
 CHANGELOG
 =========
 
+2.2.0 (2025-10-03)
+------------------
+
+Enhancements
+^^^^^^^^^^^^
+
+- Updated all dependencies to the latest versions.
+
+2.1.8 (2025-06-25)
+------------------
+
+Documentation
+^^^^^^^^^^^^^
+
+- Corrected the default for ``LDAP_STARTTLS`` to be ``True`` instead of ``False``.
+
+2.1.7 (2025-06-23)
+------------------
+
+Enhancements
+^^^^^^^^^^^^
+
+- Updated all dependencies to the latest versions.
+
 2.1.6 (2025-05-02)
 ------------------
 

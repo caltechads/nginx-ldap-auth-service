@@ -74,7 +74,7 @@ logall:
 	docker compose logs -f
 
 compile: uv.lock
-	@uv pip compile --extra=docs pyproject.toml -o requirements.txt
+	@uv pip compile --group=docs pyproject.toml -o requirements.txt
 
 docker-clean:
 	docker stop $(shell docker ps -a -q)
