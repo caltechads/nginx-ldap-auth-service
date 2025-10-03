@@ -30,14 +30,14 @@ def print_settings():
 @click.option(
     "--port",
     "-p",
-    default=lambda: os.environ.get("PORT", 8888),
+    default=lambda: int(os.environ.get("PORT", "8888")),
     type=int,
     help="The port to listen on.",
 )
 @click.option(
     "--reload/--no-reload",
     "-r",
-    default=lambda: os.environ.get("RELOAD", False),
+    default=lambda: os.environ.get("RELOAD", "False") == "True",
     type=bool,
     help="Reload the server on code changes.",
 )
@@ -57,14 +57,14 @@ def print_settings():
 )
 @click.option(
     "--insecure",
-    default=lambda: os.environ.get("INSECURE", False),
+    default=lambda: os.environ.get("INSECURE", "False") == "True",
     type=bool,
     help="If the server should run over HTTP instead of HTTPS.",
 )
 @click.option(
     "--workers",
     "-w",
-    default=lambda: os.environ.get("WORKERS", 1),
+    default=lambda: int(os.environ.get("WORKERS", "1")),
     type=int,
     help="The number of worker processes to spawn.",
 )
