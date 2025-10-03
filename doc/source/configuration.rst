@@ -277,7 +277,7 @@ These settings configure the web server that ``nginx-ldap-auth-service`` runs,
 
 .. envvar:: INSECURE
 
-    Set to ``1`` or ``True`` to start the web server with TLS disabled. Defaults to ``False``.
+    Set to ``True`` to run our auth service web server over HTTP instead of HTTPS. Defaults to ``False``.
 
 
 Login form and sessions

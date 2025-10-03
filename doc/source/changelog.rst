@@ -7,6 +7,7 @@ CHANGELOG
 Enhancements
 ^^^^^^^^^^^^
 
+- Added the ``INSECURE`` setting.  If set to ``True``, the auth service will run over HTTP instead of HTTPS -- konrad@spatialedge.ai
 - Updated all dependencies to the latest versions.
 
 2.1.8 (2025-06-25)
