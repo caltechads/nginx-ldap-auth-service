@@ -39,7 +39,7 @@ class UserManager:
         the client will be configured to use TLS.
         """
         client = bonsai.LDAPClient(
-            cast(str, self.settings.ldap_uri), tls=self.settings.ldap_starttls
+            cast("str", self.settings.ldap_uri), tls=self.settings.ldap_starttls
         )
         client.set_cert_policy("never")
         client.set_ca_cert(None)
@@ -164,7 +164,7 @@ class UserManager:
         """
         if not self.pool:
             await self.create_pool()
-        pool = cast(TimeLimitedAIOConnectionPool, self.pool)
+        pool = cast("TimeLimitedAIOConnectionPool", self.pool)
         if self.settings.ldap_authorization_filter is None:
             return True
         try:
@@ -216,7 +216,7 @@ class UserManager:
         """
         if not self.pool:
             await self.create_pool()
-        pool = cast(TimeLimitedAIOConnectionPool, self.pool)
+        pool = cast("TimeLimitedAIOConnectionPool", self.pool)
         try:
             async with pool.spawn() as conn:
                 results = await conn.search(

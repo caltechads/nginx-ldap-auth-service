@@ -5,6 +5,10 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Settings(BaseSettings):
+    """
+    Settings for the nginx_ldap_auth service.
+    """
+
     # ==================
     # Logging
     # ==================

@@ -15,11 +15,17 @@ class LoginForm:
     """
 
     def __init__(self, request: Request) -> None:
+        #: The current request object
         self.request: Request = request
+        #: The errors to display to the user
         self.errors: list = []
+        #: The username to authenticate
         self.username: str | None = None
+        #: The password to authenticate
         self.password: str | None = None
+        #: The service to redirect to after authentication
         self.service: str = "/"
+        #: The title of the site
         self.site_title: str = settings.auth_realm
 
     async def load_data(self) -> None:

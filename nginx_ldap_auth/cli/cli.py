@@ -14,10 +14,10 @@ import nginx_ldap_auth
     help="Print the current version and exit.",
 )
 @click.pass_context
-def cli(_, version: bool) -> None:
+def cli(_, version: bool) -> None:  # noqa: FBT001
     """
     The nginx_ldap_auth command line interface.
     """
     if version:
-        print(nginx_ldap_auth.__version__)
+        click.echo(nginx_ldap_auth.__version__)
         sys.exit(0)
