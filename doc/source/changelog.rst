@@ -1,6 +1,13 @@
 CHANGELOG
 =========
 
+2.3.0 (2025-10-29)
+------------------
+
+- Added a ``/status`` endpoint to the auth service.  This endpoint returns the status of the auth service.
+- Added a ``/status/ldap`` endpoint to the auth service.  This endpoint returns the status of the LDAP connection.
+- Updated all dependencies to the latest versions.
+
 2.2.0 (2025-10-03)
 ------------------
 

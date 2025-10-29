@@ -11,6 +11,7 @@ nginx-ldap-auth-service
    running
    configuration
    nginx
+   monitoring
    contributing
 
 .. toctree::
