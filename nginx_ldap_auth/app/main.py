@@ -1,6 +1,7 @@
 from pathlib import Path
 from typing import Annotated, Any, cast
 
+from bonsai import LDAPError
 from fastapi import Depends, FastAPI, Request, Response, status
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
@@ -333,6 +334,48 @@ async def check_auth(request: Request, response: Response) -> dict[str, Any]:
     response.headers["Cache-Control"] = "no-cache"
     response.status_code = status.HTTP_401_UNAUTHORIZED
     return {}
+
+
+@app.get("/status")
+async def app_status(request: Request) -> tuple[dict[str, Any], int]:  # noqa: ARG001
+    """
+    Return the status of the auth service.
+
+    Args:
+        request: The request object
+
+    Returns:
+        A tuple containing the status of the auth service and the HTTP status code.
+        The status is "ok" if the auth service is successful, otherwise "error".
+        The message is the error message if the auth service is not successful.
+
+    """
+    return {"status": "ok", "message": "Auth service is running"}, status.HTTP_200_OK
+
+
+@app.get("/status/ldap")
+async def ldap_status(request: Request) -> tuple[dict[str, Any], int]:  # noqa: ARG001
+    """
+    Return the status of the LDAP connection.
+
+    Args:
+        request: The request object
+
+    Returns:
+        A tuple containing the status of the LDAP connection and the HTTP status code.
+        The status is "ok" if the LDAP connection is successful, otherwise "error".
+        The message is the error message if the LDAP connection is not successful.
+
+    """
+    # Try to bind to the LDAP server
+    try:
+        await User.objects.client().connect(is_async=True)
+    except LDAPError as e:
+        return {
+            "status": "error",
+            "message": str(e),
+        }, status.HTTP_500_INTERNAL_SERVER_ERROR
+    return {"status": "ok", "message": "LDAP connection successful"}, status.HTTP_200_OK
 
 
 @app.exception_handler(CsrfProtectError)
