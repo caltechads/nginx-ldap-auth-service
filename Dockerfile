@@ -1,8 +1,5 @@
 FROM python:3.13-alpine3.21 AS build
 
-# This part builds the virtual environment and installs the system dependencies
-# needed to do so.
-
 ENV UV_PROJECT_ENVIRONMENT=/ve \
     UV_COMPILE_BYTECODE=1      \
     UV_LINK_MODE=copy          \
@@ -30,13 +27,10 @@ RUN --mount=type=cache,target=/uv-cache \
 FROM python:3.13-alpine3.21
 
 ENV HISTCONTROL=ignorespace:ignoredups  \
-    # Add the venv's binaries, and the /app folder, to the PATH.
     PATH=/ve/bin:/app:$PATH             \
     PYCURL_SSL_LIBRARY=nss              \
-    # Tell uv where the venv is, and to always copy instead of hardlink, which is needed for a mounted uv cache.
     UV_PROJECT_ENVIRONMENT=/ve          \
     UV_LINK_MODE=copy                   \
-    # Tell python which venv to use.
     VIRTUAL_ENV=/ve
 
 RUN apk update && \
@@ -51,6 +45,7 @@ RUN apk update && \
     mkdir -p /certs && \
     openssl req -x509 -nodes \
       -subj "/C=US/ST=CA/O=Caltech/CN=localhost.localdomain" \
+      # 10 years
       -days 3650 \
       -newkey rsa:2048 \
       -keyout /certs/server.key \
