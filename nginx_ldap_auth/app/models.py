@@ -166,6 +166,11 @@ class UserManager:
         if not self.pool:
             await self.create_pool()
         pool = cast("TimeLimitedAIOConnectionPool", self.pool)
+        logger.debug(
+            "ldap.is_authorized",
+            username=username,
+            ldap_authorization_filter=ldap_authorization_filter,
+        )
         if ldap_authorization_filter is None:
             return True
         try:
