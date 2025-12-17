@@ -193,6 +193,19 @@ X-Authenticated-User
             proxy_set_header X-Authenticated-User $auth_user;
         }
 
+X-Authorization-Filter
+
+    An optional header to specify the LDAP authorization filter to use for the request.
+    The ``proxy_set_header X-Authorization-Filter`` line goes in the ``location`` block
+    for the ``/auth`` and ``/check-auth`` locations.
+
+    If ``X-Authorization-Filter`` is set, then it will override
+    :py:attr:`nginx_ldap_auth.settings.Settings.ldap_authorization_filter` for the
+    ``nginx-ldap-auth-service`` instance.
+
+    This header can be used if multiple services with different LDAP filter requirements
+    use the same ``nginx-ldap-auth-service`` instance (e.g different AD groups).
+
 .. _nginx-ldap-auth-service-env:
 
 Environment
