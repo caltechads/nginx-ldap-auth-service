@@ -336,8 +336,8 @@ async def check_auth(request: Request, response: Response) -> dict[str, Any]:
     return {}
 
 
-@app.get("/status")
-async def app_status(request: Request) -> tuple[dict[str, Any], int]:  # noqa: ARG001
+@app.get("/status", status_code=status.HTTP_200_OK)
+async def app_status(request: Request) -> dict[str, Any]:  # noqa: ARG001
     """
     Return the status of the auth service.
 
@@ -350,11 +350,11 @@ async def app_status(request: Request) -> tuple[dict[str, Any], int]:  # noqa: A
         The message is the error message if the auth service is not successful.
 
     """
-    return {"status": "ok", "message": "Auth service is running"}, status.HTTP_200_OK
+    return {"status": "ok", "message": "Auth service is running"}
 
 
-@app.get("/status/ldap")
-async def ldap_status(request: Request) -> tuple[dict[str, Any], int]:  # noqa: ARG001
+@app.get("/status/ldap", status_code=status.HTTP_200_OK)
+async def ldap_status(request: Request) -> dict[str, Any]:  # noqa: ARG001
     """
     Return the status of the LDAP connection.
 
@@ -375,7 +375,7 @@ async def ldap_status(request: Request) -> tuple[dict[str, Any], int]:  # noqa: 
             "status": "error",
             "message": str(e),
         }, status.HTTP_500_INTERNAL_SERVER_ERROR
-    return {"status": "ok", "message": "LDAP connection successful"}, status.HTTP_200_OK
+    return {"status": "ok", "message": "LDAP connection successful"}
 
 
 @app.exception_handler(CsrfProtectError)
