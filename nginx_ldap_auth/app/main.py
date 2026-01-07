@@ -354,12 +354,13 @@ async def app_status(request: Request) -> dict[str, Any]:  # noqa: ARG001
 
 
 @app.get("/status/ldap", status_code=status.HTTP_200_OK)
-async def ldap_status(request: Request) -> dict[str, Any]:  # noqa: ARG001
+async def ldap_status(request: Request, response: Response) -> dict[str, Any]:  # noqa: ARG001
     """
     Return the status of the LDAP connection.
 
     Args:
         request: The request object
+        response: The response object
 
     Returns:
         A tuple containing the status of the LDAP connection and the HTTP status code.
@@ -371,10 +372,11 @@ async def ldap_status(request: Request) -> dict[str, Any]:  # noqa: ARG001
     try:
         await User.objects.client().connect(is_async=True)
     except LDAPError as e:
+        response.status_code = status.HTTP_500_INTERNAL_SERVER_ERROR
         return {
             "status": "error",
             "message": str(e),
-        }, status.HTTP_500_INTERNAL_SERVER_ERROR
+        }
     return {"status": "ok", "message": "LDAP connection successful"}
 
 
