@@ -370,7 +370,14 @@ async def ldap_status(request: Request, response: Response) -> dict[str, Any]:  
     """
     # Try to bind to the LDAP server
     try:
-        await User.objects.client().connect(is_async=True)
+        client = User.objects.client()
+        if settings.ldap_binddn and settings.ldap_password:
+            client.set_credentials(
+                "SIMPLE",
+                user=settings.ldap_binddn,
+                password=settings.ldap_password,
+            )
+        await client.connect(is_async=True)
     except LDAPError as e:
         response.status_code = status.HTTP_500_INTERNAL_SERVER_ERROR
         return {
