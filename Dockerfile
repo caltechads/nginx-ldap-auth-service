@@ -1,4 +1,4 @@
-FROM python:3.13-alpine3.21 AS build
+FROM python:3.13-alpine3.23 AS build
 
 ENV UV_PROJECT_ENVIRONMENT=/ve \
     UV_COMPILE_BYTECODE=1      \
@@ -24,7 +24,7 @@ RUN --mount=type=cache,target=/uv-cache \
     --mount=type=bind,source=uv.lock,target=uv.lock \
     uv --cache-dir=/uv-cache sync --frozen --no-install-project
 
-FROM python:3.13-alpine3.21
+FROM python:3.13-alpine3.23
 
 ENV HISTCONTROL=ignorespace:ignoredups  \
     PATH=/ve/bin:/app:$PATH             \
