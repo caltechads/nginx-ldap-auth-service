@@ -1,11 +1,21 @@
 CHANGELOG
 =========
 
+2.4.0 (2026-01-12)
+------------------
+
+Enhancements
+^^^^^^^^^^^^
+
+- @kblum added the ``X-Authorization-Filter`` header to the auth service via PR #17.  This header can be used to specify the LDAP authorization filter to use for the request, on a per backend basis.
+- Now using ``python:3.13-alpine3.23`` as the base image for Dockerhub image.
+- Updated all dependencies to the latest versions, again for the Dockerhub image.
+
 2.3.0 (2025-10-29)
 ------------------
 
 - Added a ``/status`` endpoint to the auth service.  This endpoint returns the status of the auth service.
-- Added a ``/status/ldap`` endpoint to the auth service.  This endpoint returns the status of the LDAP connection.
+- Added a ``/status/ldap`` endpoint to the auth service.  This endpoint returns the status of the LDAP connection
 - Updated all dependencies to the latest versions.
 
 2.2.0 (2025-10-03)
