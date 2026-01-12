@@ -302,8 +302,10 @@ async def check_auth(request: Request, response: Response) -> dict[str, Any]:
     The user is authorized if the cookie exists, the session the cookie refers
     to exists, and the ``username`` key in the settings is set.  Additionally,
     the user must still exist in LDAP, and if
+    the ``X-Authorization-Filter`` header or
     :py:attr:`nginx_ldap_auth.settings.Settings.ldap_authorization_filter` is
     not ``None``, the user must also match the filter.
+    The optional header will override the setting.
 
     Side Effects:
         If the user is not authorized, the session is destroyed, and the user is
@@ -324,7 +326,8 @@ async def check_auth(request: Request, response: Response) -> dict[str, Any]:
             if not await User.objects.get(request.session["username"]):
                 # The user does not exist in LDAP; log them out
                 await kill_session(request)
-            if not await User.objects.is_authorized(request.session["username"]):
+            ldap_authorization_filter: str = request.headers.get("X-Authorization-Filter", settings.ldap_authorization_filter)
+            if not await User.objects.is_authorized(request.session["username"], ldap_authorization_filter):
                 # The user is no longer authorized; log them out
                 await kill_session(request)
             return {}

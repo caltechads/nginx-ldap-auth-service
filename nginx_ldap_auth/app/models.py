@@ -142,15 +142,16 @@ class UserManager:
         """
         return await self.get(username) is not None
 
-    async def is_authorized(self, username: str) -> bool:
+    async def is_authorized(self, username: str, ldap_authorization_filter: str | None) -> bool:
         """
         Test whether the user is authorized to log in.  This is done by
-        performing an LDAP search using the filter specified in
+        performing an LDAP search using the filter specified in a header or
         :py:class:`nginx_ldap_auth.settings.Settings.ldap_authorization_filter`.
-        If that setting is ``None``, the user is considered authorized.
+        If the value is ``None``, the user is considered authorized.
 
         Args:
             username: the username to check
+            ldap_authorization_filter: LDAP authorization filter (optional)
 
         Raises:
             LDAPError: if an error occurred while communicating with the LDAP server
@@ -165,14 +166,19 @@ class UserManager:
         if not self.pool:
             await self.create_pool()
         pool = cast("TimeLimitedAIOConnectionPool", self.pool)
-        if self.settings.ldap_authorization_filter is None:
+        logger.debug(
+            "ldap.is_authorized",
+            username=username,
+            ldap_authorization_filter=ldap_authorization_filter,
+        )
+        if ldap_authorization_filter is None:
             return True
         try:
             async with pool.spawn() as conn:
                 results = await conn.search(
                     base=self.settings.ldap_basedn,
                     scope=bonsai.LDAPSearchScope.SUBTREE,
-                    filter_exp=self.settings.ldap_authorization_filter.format(
+                    filter_exp=ldap_authorization_filter.format(
                         username_attribute=self.settings.ldap_username_attribute,
                         fullname_attribute=self.settings.ldap_full_name_attribute,
                         username=escape_filter_exp(username),
