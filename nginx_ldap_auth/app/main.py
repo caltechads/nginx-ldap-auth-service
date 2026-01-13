@@ -368,6 +368,7 @@ async def ldap_status(request: Request, response: Response) -> dict[str, Any]:  
         The message is the error message if the LDAP connection is not successful.
 
     """
+    logger = get_logger(request)
     # Try to bind to the LDAP server
     try:
         client = User.objects.client()
@@ -379,10 +380,15 @@ async def ldap_status(request: Request, response: Response) -> dict[str, Any]:  
             )
         await client.connect(is_async=True)
     except LDAPError as e:
+        logger.error(
+            "status.ldap.error",
+            message="LDAP connection failed during status check",
+            error=str(e),
+        )
         response.status_code = status.HTTP_500_INTERNAL_SERVER_ERROR
         return {
             "status": "error",
-            "message": str(e),
+            "message": "LDAP connection failed",
         }
     return {"status": "ok", "message": "LDAP connection successful"}
 
