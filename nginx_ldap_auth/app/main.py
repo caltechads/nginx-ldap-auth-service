@@ -339,8 +339,8 @@ async def check_auth(request: Request, response: Response) -> dict[str, Any]:
     return {}
 
 
-@app.get("/status")
-async def app_status(request: Request) -> tuple[dict[str, Any], int]:  # noqa: ARG001
+@app.get("/status", status_code=status.HTTP_200_OK)
+async def app_status(request: Request) -> dict[str, Any]:  # noqa: ARG001
     """
     Return the status of the auth service.
 
@@ -353,16 +353,17 @@ async def app_status(request: Request) -> tuple[dict[str, Any], int]:  # noqa: A
         The message is the error message if the auth service is not successful.
 
     """
-    return {"status": "ok", "message": "Auth service is running"}, status.HTTP_200_OK
+    return {"status": "ok", "message": "Auth service is running"}
 
 
-@app.get("/status/ldap")
-async def ldap_status(request: Request) -> tuple[dict[str, Any], int]:  # noqa: ARG001
+@app.get("/status/ldap", status_code=status.HTTP_200_OK)
+async def ldap_status(request: Request, response: Response) -> dict[str, Any]:  # noqa: ARG001
     """
     Return the status of the LDAP connection.
 
     Args:
         request: The request object
+        response: The response object
 
     Returns:
         A tuple containing the status of the LDAP connection and the HTTP status code.
@@ -370,15 +371,33 @@ async def ldap_status(request: Request) -> tuple[dict[str, Any], int]:  # noqa: 
         The message is the error message if the LDAP connection is not successful.
 
     """
+    logger = get_logger(request)
     # Try to bind to the LDAP server
     try:
-        await User.objects.client().connect(is_async=True)
+        client = User.objects.client()
+        if settings.ldap_binddn and settings.ldap_password:
+            client.set_credentials(
+                "SIMPLE",
+                user=settings.ldap_binddn,
+                password=settings.ldap_password,
+            )
+        await client.connect(is_async=True)
     except LDAPError as e:
+        logger.error(
+            "status.ldap.error",
+            message="LDAP connection failed during status check",
+            error=str(e),
+        )
+        response.status_code = status.HTTP_500_INTERNAL_SERVER_ERROR
         return {
             "status": "error",
-            "message": str(e),
-        }, status.HTTP_500_INTERNAL_SERVER_ERROR
-    return {"status": "ok", "message": "LDAP connection successful"}, status.HTTP_200_OK
+            "message": "LDAP connection failed",
+        }
+    logger.debug(
+        "status.ldap.success",
+        message="LDAP connection successful during status check",
+    )
+    return {"status": "ok", "message": "LDAP connection successful"}
 
 
 @app.exception_handler(CsrfProtectError)
