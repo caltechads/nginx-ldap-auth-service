@@ -390,6 +390,10 @@ async def ldap_status(request: Request, response: Response) -> dict[str, Any]:  
             "status": "error",
             "message": "LDAP connection failed",
         }
+    logger.debug(
+        "status.ldap.success",
+        message="LDAP connection successful during status check",
+    )
     return {"status": "ok", "message": "LDAP connection successful"}
 
 
