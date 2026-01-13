@@ -1,6 +1,14 @@
 CHANGELOG
 =========
 
+2.4.1 (2026-01-13)
+------------------
+
+Enhancements
+^^^^^^^^^^^^
+
+- @kblum fixed the status endpoints to not serve malformed JSON, and to not expose data about internal systems
+
 2.4.0 (2026-01-12)
 ------------------
 
