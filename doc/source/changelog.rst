@@ -1,6 +1,14 @@
 CHANGELOG
 =========
 
+2.4.2 (2026-01-16)
+------------------
+
+Enhancements
+^^^^^^^^^^^^
+
+- @kblum fixed some annoyances in the development environment.
+
 2.4.1 (2026-01-13)
 ------------------
 
