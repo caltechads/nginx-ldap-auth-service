@@ -256,7 +256,13 @@ async def login_handler(
 
     """
     auth_realm = request.headers.get("x-auth-realm", settings.auth_realm)
-    await csrf_protect.validate_csrf(request)
+    try:
+        await csrf_protect.validate_csrf(request)
+    except CsrfProtectError as e:
+        get_logger(request).error("auth.login.csrf.error", error=str(e))
+        return RedirectResponse(
+            url=app.url_path_for("login"), status_code=status.HTTP_302_FOUND
+        )
     form = LoginForm(request)
     form.site_title = auth_realm
     await form.load_data()
@@ -319,17 +325,22 @@ async def check_auth(request: Request, response: Response) -> dict[str, Any]:
         An empty dictionary.
 
     """
-    if request.cookies.get(settings.cookie_name):
+    cookie_name = request.headers.get("x-cookie-name", settings.cookie_name)
+    if request.cookies.get(cookie_name):
         await load_session(request)
         if request.session.get("username"):
             # We have a valid session
             if not await User.objects.get(request.session["username"]):
                 # The user does not exist in LDAP; log them out
                 await kill_session(request)
-            ldap_authorization_filter: str = request.headers.get("X-Authorization-Filter", settings.ldap_authorization_filter)
+                response.status_code = status.HTTP_401_UNAUTHORIZED
+                return {}
+            ldap_authorization_filter: str = request.headers.get("x-authorization-filter", settings.ldap_authorization_filter)
             if not await User.objects.is_authorized(request.session["username"], ldap_authorization_filter):
                 # The user is no longer authorized; log them out
                 await kill_session(request)
+                response.status_code = status.HTTP_401_UNAUTHORIZED
+                return {}
             return {}
         # Destroy the session because it is not valid
         await kill_session(request)

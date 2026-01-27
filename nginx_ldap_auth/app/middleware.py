@@ -108,7 +108,7 @@ class SessionMiddleware(StarsessionsSessionMiddleware):
 
             username = scope["session"].get("username")
             if username:
-                headers.append("X-Authenticated-User", username)
+                headers.append("x-authenticated-user", username)
 
             if self.lifetime > 0:  # always send max-age for non-session scoped cookie
                 header_parts.append(f"max-age={remaining_time}")

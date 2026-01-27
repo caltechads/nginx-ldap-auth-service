@@ -63,6 +63,9 @@ exec:
 scout:
 	docker scout cves --only-severity=critical,high ${PACKAGE}:${VERSION}
 
+test:
+	pytest --cov=nginx_ldap_auth --cov-report=term-missing test/
+
 release: dist
 	@bin/release.sh
 	@twine upload dist/*
@@ -80,6 +83,6 @@ docker-clean:
 	docker stop $(shell docker ps -a -q)
 	docker rm $(shell docker ps -a -q)
 
-.PHONY: list build force-build
+.PHONY: list build force-build test
 list:
 	@$(MAKE) -pRrq -f $(lastword $(MAKEFILE_LIST)) : 2>/dev/null | awk -v RS= -F: '/^# File/,/^# Finished Make data base/ {if ($$1 !~ "^[#.]") {print $$1}}' | sort | egrep -v -e '^[^[:alnum:]]' -e '^$@$$' | xargs
