@@ -636,7 +636,7 @@ wheels = [
 
 [[package]]
 name = "nginx-ldap-auth-service"
-version = "2.4.2"
+version = "2.5.0"
 source = { editable = "." }
 dependencies = [
     { name = "aiodogstatsd" },
