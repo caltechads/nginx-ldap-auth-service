@@ -14,7 +14,10 @@ Enhancements
 Bugfixes
 ^^^^^^^^
 
-- The required settings in the nginx configuration file have been changed so that we can sanitize the url passed to the auth service to avoid an exploit allowing an attacker to redirect the user to a malicious service.  You now need to set the ``X-Proto-Scheme`` and ``Host`` headers in the ``/auth`` location.  See :ref:`nginx_header_config` for more information.
+- The required settings in the nginx configuration file have been changed so that we can sanitize the url passed to the auth service to avoid an exploit allowing an attacker to redirect the user to a malicious service.
+
+.. important::
+    Everyone now needs to set the ``X-Proto-Scheme`` and ``Host`` headers via ``proxy_set_header`` in the ``/auth`` location.  See :ref:`nginx_header_config` for more information.
 
 2.4.2 (2026-01-16)
 ------------------
