@@ -115,11 +115,8 @@ Things to note:
             # We need to pass in the the cookies so we can acess both the CSRF and
             # session cookies in the login workflow.
             proxy_set_header Cookie $http_cookie;
-
-            # We need these headers to build the redirect_uri for Duo MFA --
-            # It has to know the real scheme and host of the request so that it
-            # can build the redirect_uri correctly.  If you're not using Duo MFA,
-            # you don't need to set these headers.
+            # We need these headers to build the redirect_uri for Duo MFA,
+            # and to validate the URL requested by the user before auth.
             proxy_set_header X-Proto-Scheme $scheme;
             proxy_set_header Host $host;
         }

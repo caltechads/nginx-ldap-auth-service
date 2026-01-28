@@ -7,9 +7,14 @@ CHANGELOG
 Enhancements
 ^^^^^^^^^^^^
 
-- Added optional Duo MFA workflow. This can be enabled by setting ``DUO_ENABLED`` to ``True`` and providing the required Duo configuration settings.
+- Added optional Duo MFA workflow. This can be enabled by setting ``DUO_ENABLED`` to ``True`` and providing the required Duo configuration settings.  Please read the :ref:`duo_mfa` documentation for more information on how to configure Duo MFA and note that the nginx configuration file needs to be updated to pass the required headers to the auth service.
 - Updated all dependencies to the latest versions, again for the Dockerhub image.
 - Added a full test suite.
+
+Bugfixes
+^^^^^^^^
+
+- The required settings in the nginx configuration file have been changed so that we can sanitize the url passed to the auth service to avoid an exploit allowing an attacker to redirect the user to a malicious service.  You now need to set the ``X-Proto-Scheme`` and ``Host`` headers in the ``/auth`` location.  See :ref:`nginx_header_config` for more information.
 
 2.4.2 (2026-01-16)
 ------------------

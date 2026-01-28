@@ -182,6 +182,22 @@ async def save_session(request: Request) -> None:
     await get_session_handler(request).save(remaining_time=settings.session_max_age)
 
 
+async def validate_service_url(request: Request, service: str | None = None) -> str:
+    """
+    Validate the service URL requested by the user.
+    """
+    base_url = (
+        f"{request.headers.get('x-proto-scheme')}://{request.headers.get('host')}"
+    )
+    if not service:
+        service = request.query_params.get("service", "/")
+    if service.startswith((base_url, "/")):
+        return service
+    raise HTTPException(
+        status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid URL requested"
+    )
+
+
 # --------------------------------------
 # Views
 # --------------------------------------
@@ -216,6 +232,7 @@ async def login(
         Otherwise, a rendered login page.
 
     """
+    service = await validate_service_url(request, service=service)
     csrf_token, signed_token = csrf_protect.generate_csrf_tokens()
     auth_realm = request.headers.get("x-auth-realm", settings.auth_realm)
     _logger = get_logger(request)
@@ -298,8 +315,13 @@ async def login_handler(
         request.session["username"] = form.username
         request.session["duo_authenticated"] = False
         if settings.duo_enabled:
+            service = await validate_service_url(request, service=form.service)
             response = RedirectResponse(
-                url=f"/auth/duo?service={form.service}",
+                # semgrep-reason:
+                #    The service URL is sanitized by the validate_service_url function,
+                #    so we can safely redirect to it.
+                # nosemgrep: tainted-redirect-fastapi  # noqa: ERA001
+                url=f"/auth/duo?service={service}",
                 status_code=status.HTTP_302_FOUND,
             )
         else:
@@ -346,7 +368,12 @@ async def duo(request: Request, service: str = "/") -> RedirectResponse:
         A redirect response to the Duo Universal Prompt.
 
     """
+    service = await validate_service_url(request, service=service)
     if not settings.duo_enabled:
+        # semgrep-reason:
+        #    The service URL is sanitized by the validate_service_url function,
+        #    so we can safely redirect to it.
+        # nosemgrep: tainted-redirect-fastapi  # noqa: ERA001
         return RedirectResponse(url=service)
     _logger = get_logger(request)
     await load_session(request)
@@ -355,7 +382,12 @@ async def duo(request: Request, service: str = "/") -> RedirectResponse:
     if not username:
         _logger.warning("auth.duo.no_username")
         return RedirectResponse(
-            url=f"/auth/login?service={service}", status_code=status.HTTP_302_FOUND
+            # semgrep-reason:
+            #    The service URL is sanitized by the validate_service_url function,
+            #    so we can safely redirect to it.
+            # nosemgrep: tainted-redirect-fastapi  # noqa: ERA001
+            url=f"/auth/login?service={service}",
+            status_code=status.HTTP_302_FOUND,
         )
     # Get the base URL from the request headers
     base_url = (
@@ -405,6 +437,10 @@ async def duo(request: Request, service: str = "/") -> RedirectResponse:
         ) from e
     else:
         _logger.info("auth.duo.redirect.success", username=username, target=service)
+        # semgrep-reason:
+        #    The auth URL is sanitized by the Duo client,
+        #    so we can safely redirect to it.
+        # nosemgrep: tainted-redirect-fastapi  # noqa: ERA001
         return RedirectResponse(url=auth_url)
 
 
@@ -435,15 +471,24 @@ async def duo_callback(
     username = request.session.get("username")
     stored_state = request.session.get("duo_state")
     service = request.session.get("duo_service", "/")
+    service = await validate_service_url(request, service=service)
 
     if not state:
         _logger.warning("auth.duo.callback.missing_parameters")
+        # semgrep-reason:
+        #    The service URL is sanitized by the validate_service_url function,
+        #    so we can safely redirect to it.
+        # nosemgrep: tainted-redirect-fastapi  # noqa: ERA001
         return RedirectResponse(url=f"/auth/login?service={service}")
 
     if state != stored_state:
         _logger.error(
             "auth.duo.callback.state_mismatch", stored_state=stored_state, state=state
         )
+        # semgrep-reason:
+        #    The service URL is sanitized by the validate_service_url function,
+        #    so we can safely redirect to it.
+        # nosemgrep: tainted-redirect-fastapi  # noqa: ERA001
         return RedirectResponse(url=f"/auth/login?service={service}")
 
     # Get the base URL from the request headers
@@ -468,6 +513,10 @@ async def duo_callback(
         )
     except duo_universal.DuoException as e:
         _logger.exception("auth.duo.callback.exchange_failed", error=str(e))
+        # semgrep-reason:
+        #    The service URL is sanitized by the validate_service_url function,
+        #    so we can safely redirect to it.
+        # nosemgrep: tainted-redirect-fastapi  # noqa: ERA001
         return RedirectResponse(url=f"/auth/login?service={service}")
     else:
         _logger.info(
@@ -485,6 +534,10 @@ async def duo_callback(
 
     await save_session(request)
     _logger.info("auth.duo.callback.success", username=username, target=service)
+    # semgrep-reason:
+    #    The service URL is sanitized by the validate_service_url function,
+    #    so we can safely redirect to it.
+    # nosemgrep: tainted-redirect-fastapi  # noqa: ERA001
     return RedirectResponse(url=service)
 
 
