@@ -1,8 +1,10 @@
+from contextlib import asynccontextmanager
 from pathlib import Path
-from typing import Annotated, Any, cast
+from typing import Annotated, Any, Final, cast
 
+import duo_universal
 from bonsai import LDAPError
-from fastapi import Depends, FastAPI, Request, Response, status
+from fastapi import Depends, FastAPI, HTTPException, Request, Response, status
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
@@ -10,6 +12,7 @@ from fastapi_csrf_protect import CsrfProtect
 from fastapi_csrf_protect.exceptions import CsrfProtectError
 from pydantic import AnyUrl, Field
 from pydantic_settings import BaseSettings
+from starlette.concurrency import run_in_threadpool
 from starsessions import (
     InMemoryStore,
     SessionStore,
@@ -23,7 +26,7 @@ from nginx_ldap_auth.settings import Settings
 
 from ..logging import get_logger
 from .forms import LoginForm
-from .middleware import SessionMiddleware
+from .middleware import ExceptionLoggingMiddleware, SessionMiddleware
 from .models import User
 
 current_dir: Path = Path(__file__).resolve().parent
@@ -33,6 +36,16 @@ templates_dir: Path = current_dir / "templates"
 
 settings = Settings()
 
+#: These paths are excluded from Duo authentication
+DUO_AUTH_PATHS: Final[set[str]] = {
+    "/auth/login",
+    "/auth/logout",
+    "/auth/duo/callback",
+    "/auth/duo",
+    "/status",
+    "/check",
+}
+
 # --------------------------------------
 # Session Store
 # --------------------------------------
@@ -41,10 +54,15 @@ if settings.session_backend == "memory":
     store: SessionStore = InMemoryStore()
     get_logger().info("session.store", backend=settings.session_backend)
 elif settings.session_backend == "redis":
+    # If session_max_age is 0 (session-only cookie), we still need a TTL for Redis.
+    # We'll use 30 days as a default gc_ttl in that case.
+    gc_ttl = (
+        settings.session_max_age if settings.session_max_age > 0 else 3600 * 24 * 30
+    )
     store = RedisStore(
         str(settings.redis_url),
         prefix=settings.redis_prefix,
-        gc_ttl=settings.session_max_age,
+        gc_ttl=gc_ttl,
     )
     redis_url = cast("AnyUrl", settings.redis_url)
     get_logger().info(
@@ -94,14 +112,37 @@ def get_csrf_config():
 # The FastAPI app
 # --------------------------------------
 
-app = FastAPI(title="nginx_ldap_auth", debug=settings.debug, version=__version__)
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):  # noqa: ARG001
+    """
+    Handle startup and shutdown events.
+    """
+    # Startup: Create the LDAP connection pool
+    await User.objects.create_pool()
+    yield
+    # Shutdown: Close the LDAP connection pool
+    await User.objects.cleanup()
+
+
+app = FastAPI(
+    title="nginx_ldap_auth",
+    debug=settings.debug,
+    version=__version__,
+    lifespan=lifespan,
+)
 app.mount("/auth/static", StaticFiles(directory=str(static_dir)), name="static")
+
+# Register session middleware
 app.add_middleware(
     SessionMiddleware,
     store=store,
     cookie_name=settings.cookie_name,
     lifetime=settings.session_max_age,
 )
+app.add_middleware(ExceptionLoggingMiddleware)
+
+
 get_logger().info(
     "session.setup.complete",
     backend=settings.session_backend,
@@ -111,27 +152,6 @@ get_logger().info(
     rolling=settings.use_rolling_session,
 )
 templates = Jinja2Templates(directory=str(templates_dir))
-
-
-# --------------------------------------
-# Startup and Shutdown Events
-# --------------------------------------
-
-
-@app.on_event("startup")
-async def startup() -> None:
-    """
-    Create the LDAP connection pool when we start up.
-    """
-    await User.objects.create_pool()
-
-
-@app.on_event("shutdown")
-async def shutdown() -> None:
-    """
-    Close the LDAP connection pool when we shut down.
-    """
-    await User.objects.cleanup()
 
 
 # --------------------------------------
@@ -153,6 +173,13 @@ async def kill_session(request: Request) -> None:
     for key in list(request.session.keys()):
         del request.session[key]
     await get_session_handler(request).destroy()
+
+
+async def save_session(request: Request) -> None:
+    """
+    Save the session to the backend.
+    """
+    await get_session_handler(request).save(remaining_time=settings.session_max_age)
 
 
 # --------------------------------------
@@ -269,9 +296,16 @@ async def login_handler(
     if await form.is_valid():
         await load_session(request)
         request.session["username"] = form.username
-        response: HTMLResponse | RedirectResponse = RedirectResponse(
-            url=form.service, status_code=status.HTTP_302_FOUND
-        )
+        request.session["duo_authenticated"] = False
+        if settings.duo_enabled:
+            response = RedirectResponse(
+                url=f"/auth/duo?service={form.service}",
+                status_code=status.HTTP_302_FOUND,
+            )
+        else:
+            response = RedirectResponse(
+                url=form.service, status_code=status.HTTP_302_FOUND
+            )
     else:
         response = templates.TemplateResponse("login.html", form.__dict__)
     csrf_protect.unset_csrf_cookie(response)  # prevent token reuse
@@ -297,6 +331,161 @@ async def logout(request: Request) -> RedirectResponse:
         await kill_session(request)
         _logger.info("auth.logout", username=username)
     return RedirectResponse(url="/auth/login?service=/")
+
+
+@app.get("/auth/duo", response_model=None, name="duo")
+async def duo(request: Request, service: str = "/") -> RedirectResponse:
+    """
+    Initiate the Duo MFA workflow.
+
+    Args:
+        request: The request object
+        service: The service to redirect to after successful MFA
+
+    Returns:
+        A redirect response to the Duo Universal Prompt.
+
+    """
+    if not settings.duo_enabled:
+        return RedirectResponse(url=service)
+    _logger = get_logger(request)
+    await load_session(request)
+    _logger.info("auth.duo.session", session=request.session)
+    username = request.session.get("username")
+    if not username:
+        _logger.warning("auth.duo.no_username")
+        return RedirectResponse(
+            url=f"/auth/login?service={service}", status_code=status.HTTP_302_FOUND
+        )
+    # Get the base URL from the request headers
+    base_url = (
+        f"{request.headers.get('x-proto-scheme')}://{request.headers.get('host')}"
+    )
+
+    # Initialize Duo client
+    try:
+        duo_client = duo_universal.Client(
+            client_id=cast("str", settings.duo_ikey),
+            client_secret=cast("str", settings.duo_skey),
+            host=cast("str", settings.duo_host),
+            redirect_uri=f"{base_url}/auth/duo/callback",
+        )
+    except (ValueError, TypeError) as e:
+        _logger.exception("auth.duo.client_creation_failed", error=str(e))
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to create Duo client",
+        ) from e
+
+    # Perform health check
+    try:
+        duo_client.health_check()
+    except duo_universal.DuoException as e:
+        _logger.exception("auth.duo.health_check_failed", error=str(e))
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Duo health check failed",
+        ) from e
+    else:
+        _logger.debug("auth.duo.health_check.success")
+    # Generate state and store it in session
+    state = duo_client.generate_state()
+    request.session["duo_state"] = state
+    request.session["duo_service"] = service
+    _logger.info("auth.duo.state_saved", state=state, service=service)
+    await save_session(request)
+    try:
+        # Create auth URL and redirect
+        auth_url = duo_client.create_auth_url(username, state)
+    except (ValueError, TypeError, duo_universal.DuoException) as e:
+        _logger.exception("auth.duo.error", error=str(e))
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to initiate MFA",
+        ) from e
+    else:
+        _logger.info("auth.duo.redirect.success", username=username, target=service)
+        return RedirectResponse(url=auth_url)
+
+
+@app.get("/auth/duo/callback", response_model=None, name="duo_callback")
+async def duo_callback(
+    request: Request,
+    duo_code: str | None = None,
+    state: str | None = None,
+) -> RedirectResponse:
+    """
+    Handle the callback from Duo.
+
+    Args:
+        request: The request object
+        duo_code: The authorization code from Duo
+        state: The state parameter from Duo
+
+    Returns:
+        A redirect response to the original service URL.
+
+    """
+    _logger = get_logger(request)
+
+    state = request.query_params.get("state")
+
+    await load_session(request)
+    # Session data
+    username = request.session.get("username")
+    stored_state = request.session.get("duo_state")
+    service = request.session.get("duo_service", "/")
+
+    if not state:
+        _logger.warning("auth.duo.callback.missing_parameters")
+        return RedirectResponse(url=f"/auth/login?service={service}")
+
+    if state != stored_state:
+        _logger.error(
+            "auth.duo.callback.state_mismatch", stored_state=stored_state, state=state
+        )
+        return RedirectResponse(url=f"/auth/login?service={service}")
+
+    # Get the base URL from the request headers
+    base_url = (
+        f"{request.headers.get('x-proto-scheme')}://{request.headers.get('host')}"
+    )
+    # Initialize Duo client
+    duo_client = duo_universal.Client(
+        client_id=cast("str", settings.duo_ikey),
+        client_secret=cast("str", settings.duo_skey),
+        host=cast("str", settings.duo_host),
+        redirect_uri=f"{base_url}/auth/duo/callback",
+    )
+
+    try:
+        # Exchange code for 2FA result
+        # The duo_client call is synchronous, so we need to run it in a threadpool.
+        await run_in_threadpool(
+            duo_client.exchange_authorization_code_for_2fa_result,
+            duo_code,
+            username,
+        )
+    except duo_universal.DuoException as e:
+        _logger.exception("auth.duo.callback.exchange_failed", error=str(e))
+        return RedirectResponse(url=f"/auth/login?service={service}")
+    else:
+        _logger.info(
+            "auth.duo.callback.exchange_success", username=username, target=service
+        )
+
+    # Success!
+    request.session["duo_authenticated"] = True
+
+    # Clean up Duo-specific session data
+    if "duo_state" in request.session:
+        del request.session["duo_state"]
+    if "duo_service" in request.session:
+        del request.session["duo_service"]
+
+    await save_session(request)
+    _logger.info("auth.duo.callback.success", username=username, target=service)
+    return RedirectResponse(url=service)
 
 
 @app.get("/check")
@@ -329,14 +518,27 @@ async def check_auth(request: Request, response: Response) -> dict[str, Any]:
     if request.cookies.get(cookie_name):
         await load_session(request)
         if request.session.get("username"):
+            if (
+                settings.duo_enabled
+                and request.session.get("duo_authenticated") is None
+            ):
+                await kill_session(request)
+                # User is LDAP-authenticated but not Duo-authenticated
+                response.status_code = status.HTTP_401_UNAUTHORIZED
+                return {}
+
             # We have a valid session
             if not await User.objects.get(request.session["username"]):
                 # The user does not exist in LDAP; log them out
                 await kill_session(request)
                 response.status_code = status.HTTP_401_UNAUTHORIZED
                 return {}
-            ldap_authorization_filter: str = request.headers.get("x-authorization-filter", settings.ldap_authorization_filter)
-            if not await User.objects.is_authorized(request.session["username"], ldap_authorization_filter):
+            ldap_authorization_filter: str = request.headers.get(
+                "x-authorization-filter", settings.ldap_authorization_filter
+            )
+            if not await User.objects.is_authorized(
+                request.session["username"], ldap_authorization_filter
+            ):
                 # The user is no longer authorized; log them out
                 await kill_session(request)
                 response.status_code = status.HTTP_401_UNAUTHORIZED
@@ -368,7 +570,7 @@ async def app_status(request: Request) -> dict[str, Any]:  # noqa: ARG001
 
 
 @app.get("/status/ldap", status_code=status.HTTP_200_OK)
-async def ldap_status(request: Request, response: Response) -> dict[str, Any]:  # noqa: ARG001
+async def ldap_status(request: Request, response: Response) -> dict[str, Any]:
     """
     Return the status of the LDAP connection.
 
@@ -393,11 +595,10 @@ async def ldap_status(request: Request, response: Response) -> dict[str, Any]:  
                 password=settings.ldap_password,
             )
         await client.connect(is_async=True)
-    except LDAPError as e:
-        logger.error(
+    except LDAPError:
+        logger.exception(
             "status.ldap.error",
             message="LDAP connection failed during status check",
-            error=str(e),
         )
         response.status_code = status.HTTP_500_INTERNAL_SERVER_ERROR
         return {
@@ -409,6 +610,29 @@ async def ldap_status(request: Request, response: Response) -> dict[str, Any]:  
         message="LDAP connection successful during status check",
     )
     return {"status": "ok", "message": "LDAP connection successful"}
+
+
+@app.get("/nginx_ldap_auth/test")
+async def nginx_ldap_auth_test(_: Request, response: Response) -> dict[str, Any]:
+    """
+    A test endpoint to check if if the auth workflow is working.
+
+    Args:
+        _: The request object
+        response: The response object
+
+    Returns:
+        If :attr:`nginx_ldap_auth.settings.Settings.debug` is True, return a
+        dictionary containing the status of the test and the HTTP status code.
+        Otherwise, send 404 not found.
+
+    """
+    if settings.debug:
+        return {"status": "ok", "message": "Auth service worked"}
+    # Force the user to authenticate
+    response.headers["Cache-Control"] = "no-cache"
+    response.status_code = status.HTTP_401_UNAUTHORIZED
+    return {}
 
 
 @app.exception_handler(CsrfProtectError)

@@ -103,6 +103,17 @@ service::
     - SESSION_BACKEND=redis
     - REDIS_URL=redis://redis:6379/0
 
+Run the tests
+-------------
+
+All the tests are in the ``test`` directory.  You can run them with the ``pytest`` command.
+
+.. code-block:: shell
+
+    $ make test
+    # or run the tests in a specific file
+    $ pytest test/test_auth_flow.py
+
 Use your dev environment
 ------------------------
 

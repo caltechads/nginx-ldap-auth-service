@@ -49,6 +49,7 @@ User authentication
   servers.  This allows you to use a single login form for multiple sites
   (single signon like), or you can configure each nginx server to use different
   session cookies so that login sessions are not shared between sites.
+- Optional Duo MFA workflow after LDAP authentication.  See :ref:`duo_mfa` for more information.
 
 User authorization
 ------------------

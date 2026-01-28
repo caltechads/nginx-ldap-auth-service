@@ -41,15 +41,36 @@ def get_logger(request: Request | None = None) -> structlog.BoundLogger:
     """
     if request is None:
         return logger
-    remote_ip = request.headers.get("x-forwarded-for")
+    if isinstance(request, dict):
+        # This is a scope, not a Request object
+        from starlette.datastructures import Headers
+
+        headers = Headers(scope=request)
+        # Extract client host from scope directly to be safe
+        client_host = "unknown"
+        if "client" in request and request["client"]:
+            client_host = request["client"][0]
+    elif hasattr(request, "headers"):
+        headers = request.headers
+        client_host = (
+            request.client.host
+            if (hasattr(request, "client") and request.client)
+            else "unknown"
+        )
+    else:
+        # Fallback for other types
+        headers = {}
+        client_host = "unknown"
+
+    remote_ip = headers.get("x-forwarded-for")
     if remote_ip:
         remote_ip = remote_ip.split(",")[0]
     else:
-        remote_ip = cast("Address", request.client).host
-    request = cast("Request", request)
+        remote_ip = client_host
+
     return logger.bind(
-        realm=request.headers.get("x-auth-realm", settings.auth_realm),
-        host=request.headers.get("host", "unknown"),
+        realm=headers.get("x-auth-realm", settings.auth_realm),
+        host=headers.get("host", "unknown"),
         remote_ip=remote_ip,
     )
 

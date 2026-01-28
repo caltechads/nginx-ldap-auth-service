@@ -1,6 +1,16 @@
 CHANGELOG
 =========
 
+2.5.0 (2026-01-27)
+------------------
+
+Enhancements
+^^^^^^^^^^^^
+
+- Added optional Duo MFA workflow. This can be enabled by setting ``DUO_ENABLED`` to ``True`` and providing the required Duo configuration settings.
+- Updated all dependencies to the latest versions, again for the Dockerhub image.
+- Added a full test suite.
+
 2.4.2 (2026-01-16)
 ------------------
 

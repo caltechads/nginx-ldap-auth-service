@@ -8,6 +8,7 @@ annotated-types==0.7.0
     # via pydantic
 anyio==3.7.1
     # via
+    #   httpx
     #   starlette
     #   watchfiles
 babel==2.16.0
@@ -16,6 +17,8 @@ bonsai==1.5.3
     # via nginx-ldap-auth-service (pyproject.toml)
 certifi==2024.12.14
     # via
+    #   httpcore
+    #   httpx
     #   requests
     #   sentry-sdk
 charset-normalizer==3.4.1
@@ -28,6 +31,8 @@ docutils==0.19
     # via
     #   sphinx
     #   sphinx-rtd-theme
+duo-universal==2.2.0
+    # via nginx-ldap-auth-service (pyproject.toml)
 fastapi==0.115.7
     # via
     #   nginx-ldap-auth-service (pyproject.toml)
@@ -35,17 +40,26 @@ fastapi==0.115.7
 fastapi-csrf-protect==1.0.0
     # via nginx-ldap-auth-service (pyproject.toml)
 h11==0.14.0
-    # via uvicorn
+    # via
+    #   httpcore
+    #   uvicorn
+httpcore==1.0.8
+    # via httpx
 httptools==0.6.4
     # via
     #   nginx-ldap-auth-service (pyproject.toml)
     #   uvicorn
+httpx==0.28.1
+    # via nginx-ldap-auth-service (pyproject.toml)
 idna==3.10
     # via
     #   anyio
+    #   httpx
     #   requests
 imagesize==1.4.1
     # via sphinx
+iniconfig==2.3.0
+    # via pytest
 itsdangerous==2.2.0
     # via
     #   fastapi-csrf-protect
@@ -56,8 +70,19 @@ jinja2==3.1.5
     #   sphinx
 markupsafe==3.0.2
     # via jinja2
+mirakuru==3.0.1
+    # via pytest-redis
 packaging==24.2
-    # via sphinx
+    # via
+    #   pytest
+    #   sphinx
+    #   wheel
+pluggy==1.6.0
+    # via pytest
+port-for==1.0.0
+    # via pytest-redis
+psutil==7.2.1
+    # via mirakuru
 pydantic==2.10.6
     # via
     #   nginx-ldap-auth-service (pyproject.toml)
@@ -71,7 +96,15 @@ pydantic-settings==2.7.1
     #   nginx-ldap-auth-service (pyproject.toml)
     #   fastapi-csrf-protect
 pygments==2.19.1
-    # via sphinx
+    # via
+    #   pytest
+    #   sphinx
+pyjwt==2.10.1
+    # via duo-universal
+pytest==9.0.2
+    # via pytest-redis
+pytest-redis==3.1.3
+    # via nginx-ldap-auth-service (pyproject.toml)
 python-dotenv==1.0.1
     # via
     #   nginx-ldap-auth-service (pyproject.toml)
@@ -82,9 +115,12 @@ python-multipart==0.0.20
 pyyaml==6.0.2
     # via uvicorn
 redis==5.2.1
-    # via starsessions
+    # via
+    #   pytest-redis
+    #   starsessions
 requests==2.32.3
     # via
+    #   duo-universal
     #   sphinx
     #   sphinxcontrib-images
 sentry-sdk==2.20.0
@@ -153,3 +189,5 @@ watchfiles==1.0.4
     #   uvicorn
 websockets==14.2
     # via uvicorn
+wheel==0.46.3
+    # via duo-universal

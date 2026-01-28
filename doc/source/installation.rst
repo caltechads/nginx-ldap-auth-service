@@ -34,6 +34,11 @@ You can also run ``nginx-ldap-auth-service`` from Docker Hub::
         -e LDAP_BASEDN=dc=example,dc=com \
         -e LDAP_BINDDN=cn=admin,dc=example,dc=com \
         -e LDAP_PASSWORD=secret \
+        # Optional Duo MFA settings
+        -e DUO_ENABLED=True
+        -e DUO_HOST=api-12345678.duosecurity.com
+        -e DUO_IKEY=DIXXXXXXXXXXXXXXXXXX
+        -e DUO_SKEY=XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
         caltechads/nginx-ldap-auth-service
 
 Or use ``docker-compose``. Create a ``docker-compose.yml`` file with the
@@ -51,6 +56,11 @@ following contents::
           - LDAP_BASEDN=dc=example,dc=com \
           - LDAP_BINDDN=cn=admin,dc=example,dc=com
           - LDAP_PASSWORD=secret
+          # Optional Duo MFA settings
+          - DUO_ENABLED=True
+          - DUO_HOST=api-12345678.duosecurity.com
+          - DUO_IKEY=DIXXXXXXXXXXXXXXXXXX
+          - DUO_SKEY=XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 
 Then run::
 

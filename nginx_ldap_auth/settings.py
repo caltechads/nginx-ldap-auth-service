@@ -129,6 +129,18 @@ class Settings(BaseSettings):
     ldap_pool_connection_lifetime_seconds: int = 20
 
     # ==================
+    # Duo
+    # ==================
+    #: Whether to enable Duo MFA
+    duo_enabled: bool = False
+    #: Duo integration host
+    duo_host: str | None = None
+    #: Duo integration ikey
+    duo_ikey: str | None = None
+    #: Duo integration skey
+    duo_skey: str | None = None
+
+    # ==================
     # Sentry
     # ==================
     #: The sentry DSN to use for error reporting.  If this is ``None``, no
@@ -151,4 +163,24 @@ class Settings(BaseSettings):
         if self.session_backend == "redis" and not self.redis_url:
             msg = "redis_url is required if session_backend is redis"
             raise ValidationError(msg)
+        return self
+
+    @model_validator(mode="after")  #: type: ignore
+    def duo_settings_required_if_enabled(self):
+        """
+        If we've enabled Duo MFA, :py:attr:`duo_host`, :py:attr:`duo_ikey`,
+        and :py:attr:`duo_skey` are required.
+
+        Raises:
+            ValidationError: Duo settings are required if ``duo_enabled`` is
+            ``True``
+
+        """
+        if self.duo_enabled:
+            if not all([self.duo_host, self.duo_ikey, self.duo_skey]):
+                msg = (
+                    "duo_host, duo_ikey, and duo_skey are required if duo_enabled "
+                    "is True"
+                )
+                raise ValidationError(msg)
         return self

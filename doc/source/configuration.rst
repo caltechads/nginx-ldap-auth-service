@@ -350,6 +350,37 @@ These settings configure the login form and session handling.
 
     The prefix to use for Redis keys. Defaults to ``nginx_ldap_auth``.
 
+.. _duo_mfa:
+
+Duo MFA
+^^^^^^^
+
+These settings configure the Duo MFA workflow.
+
+.. envvar:: DUO_ENABLED
+
+    Set to ``True`` to enable Duo MFA. Defaults to ``False``.
+
+.. envvar:: DUO_HOST
+
+    **Required if DUO_ENABLED is True**. The Duo API hostname.
+
+.. envvar:: DUO_IKEY
+
+    **Required if DUO_ENABLED is True**. The Duo integration key.
+
+.. envvar:: DUO_SKEY
+
+    **Required if DUO_ENABLED is True**. The Duo secret key.
+
+
+.. important::
+
+    When enabling Duo MFA, see :ref:`nginx_header_config` for how to set the
+    required ``X-Proto-Scheme`` and ``Host`` headers in the ``nginx``
+    configuration file so that the Duo MFA workflow can build the Duo callback
+    URL correctly.
+
 
 LDAP
 ^^^^

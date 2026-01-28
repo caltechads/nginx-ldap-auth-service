@@ -14,7 +14,7 @@ services:
       - nginx_ldap_auth_service
 
   nginx_ldap_auth_service:
-    image: caltechads/nginx-ldap-auth-service:latest
+    image: nginx-ldap-auth-service:latest
     hostname: nginx-ldap-auth-service
     ports:
       - "8888:8888"

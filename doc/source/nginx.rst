@@ -67,6 +67,10 @@ Things to note:
   match that value with in all places in that line.
 - See :ref:`nginx_header_config` for information on how to configure
   ``nginx-ldap-auth-service`` behavior using custom headers.
+- If you are setting ``DUO_ENABLED`` to ``True``, you will need to set the
+  ``X-Proto-Scheme`` and ``Host`` headers in the ``/auth`` location.  See
+  :ref:`nginx_header_config` for more information on how to set these headers,
+  and :ref:`duo_mfa` for more information on how to configure Duo MFA.
 
 
 .. code-block:: nginx
@@ -108,9 +112,16 @@ Things to note:
             proxy_set_header Host $host;
             proxy_set_header X-Real-IP $remote_addr;
             proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-            # We need to pass in the CSRF cookie we set in the login code so
-            # that we can validate it
-            proxy_set_header Cookie nginxauth_csrf=$cookie_nginxauth_csrf;
+            # We need to pass in the the cookies so we can acess both the CSRF and
+            # session cookies in the login workflow.
+            proxy_set_header Cookie $http_cookie;
+
+            # We need these headers to build the redirect_uri for Duo MFA --
+            # It has to know the real scheme and host of the request so that it
+            # can build the redirect_uri correctly.  If you're not using Duo MFA,
+            # you don't need to set these headers.
+            proxy_set_header X-Proto-Scheme $scheme;
+            proxy_set_header Host $host;
         }
 
         location /check-auth {

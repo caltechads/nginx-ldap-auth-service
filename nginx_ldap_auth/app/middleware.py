@@ -1,11 +1,19 @@
 import typing
+from collections.abc import Callable
 
+from fastapi import Request, Response
 from starlette.datastructures import MutableHeaders
+from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import HTTPConnection
 from starlette.types import Message, Receive, Scope, Send
 from starsessions import SessionMiddleware as StarsessionsSessionMiddleware
 from starsessions.middleware import LoadGuard
 from starsessions.session import SessionHandler, get_session_remaining_seconds
+
+from nginx_ldap_auth.logging import get_logger
+from nginx_ldap_auth.settings import Settings
+
+settings = Settings()
 
 
 class SessionMiddleware(StarsessionsSessionMiddleware):
@@ -98,11 +106,11 @@ class SessionMiddleware(StarsessionsSessionMiddleware):
                     remaining_time = get_session_remaining_seconds(connection)
 
             # persist session data
-            session_id = await handler.save(remaining_time)
+            new_session_id = await handler.save(remaining_time)
 
             headers = MutableHeaders(scope=message)
             header_parts = [
-                f"{cookie_name}={session_id}",
+                f"{cookie_name}={new_session_id}",
                 f"path={path}",
             ]
 
@@ -122,4 +130,41 @@ class SessionMiddleware(StarsessionsSessionMiddleware):
 
             await send(message)
 
-        await self.app(scope, receive, send_wrapper)
+        try:
+            await self.app(scope, receive, send_wrapper)
+        except Exception:
+            _logger = get_logger(scope)
+            _logger.exception("session.middleware.error")
+            raise
+
+
+class ExceptionLoggingMiddleware(BaseHTTPMiddleware):
+    """
+    Middleware to log exceptions that are not caught elsewhere.
+    """
+
+    async def dispatch(self, request: Request, call_next: Callable) -> Response:
+        """
+        Dispatch the request.
+
+        Args:
+            request: The request object
+            call_next: The next middleware to call
+
+        Returns:
+            The response from the next middleware or raises an exception if an
+            error occurs.
+
+        """
+        _logger = get_logger(request)
+        try:
+            return await call_next(request)
+        except Exception:
+            _logger.exception(
+                "exception.logging.middleware.error",
+                extra={
+                    "method": request.method,
+                    "url": str(request.url),
+                },
+            )
+            raise  # IMPORTANT: re-raise so FastAPI can handle it

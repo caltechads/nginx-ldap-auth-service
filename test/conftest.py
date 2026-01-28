@@ -24,7 +24,8 @@ def mock_user_manager(mocker):
 
     # Patch the methods on UserManager class
     mocker.patch(
-        "nginx_ldap_auth.app.models.UserManager.authenticate", mock_manager.authenticate
+        "nginx_ldap_auth.app.models.UserManager.authenticate",
+        mock_manager.authenticate,
     )
     mocker.patch("nginx_ldap_auth.app.models.UserManager.get", mock_manager.get)
     mocker.patch("nginx_ldap_auth.app.models.UserManager.exists", mock_manager.exists)
@@ -47,14 +48,20 @@ def mock_user_manager(mocker):
 
 
 @pytest.fixture
-def client():
+def client(mock_user_manager):  # noqa: ARG001
     """
     Return a TestClient for the FastAPI app.
     """
     from nginx_ldap_auth.app.main import app
 
     # Use follow_redirects=False by default
-    return TestClient(app, raise_server_exceptions=False, follow_redirects=False)
+    with TestClient(
+        app,
+        base_url="https://testserver",
+        raise_server_exceptions=True,
+        follow_redirects=False,
+    ) as c:
+        yield c
 
 
 @pytest.fixture(autouse=True)

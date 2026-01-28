@@ -68,8 +68,12 @@ class LoginForm:
             # The user exists in LDAP
             user = cast("User", user)
             # Ensure that the user is authorized to access this service
-            ldap_authorization_filter: str = self.request.headers.get("x-authorization-filter", settings.ldap_authorization_filter)
-            if not await User.objects.is_authorized(cast("str", self.username), ldap_authorization_filter):
+            ldap_authorization_filter: str = self.request.headers.get(
+                "x-authorization-filter", settings.ldap_authorization_filter
+            )
+            if not await User.objects.is_authorized(
+                cast("str", self.username), ldap_authorization_filter
+            ):
                 self.errors.append("You are not authorized to access this service.")
                 _logger.warning(
                     "auth.failed.not_authorized",
