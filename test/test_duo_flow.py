@@ -171,7 +171,7 @@ def test_duo_callback_success(
         "/auth/duo/callback",
         params={"state": "test_state", "duo_code": "valid_code"},
         cookies={mock_duo_settings.cookie_name: session_id},
-        headers={"x-proto-scheme": "https", "host": "localhost"},
+        headers={"x-proto-scheme": "https", "x-host": "localhost", "host": "localhost"},
         follow_redirects=False,
     )
 

@@ -22,6 +22,7 @@ from starsessions import (
 from starsessions.stores.redis import RedisStore
 
 from nginx_ldap_auth import __version__
+from nginx_ldap_auth.exc import ImproperlyConfigured
 from nginx_ldap_auth.settings import Settings
 
 from ..logging import get_logger
@@ -140,6 +141,8 @@ app.add_middleware(
     cookie_name=settings.cookie_name,
     lifetime=settings.session_max_age,
 )
+# Outermost middleware that will log all exceptions not caught by other
+# middleware.
 app.add_middleware(ExceptionLoggingMiddleware)
 
 
@@ -182,12 +185,53 @@ async def save_session(request: Request) -> None:
     await get_session_handler(request).save(remaining_time=settings.session_max_age)
 
 
+def check_required_headers(request: Request) -> None:
+    """
+    Check that the required headers are present in the request.
+
+    - ``X-Proto-Scheme``
+    - ``Host``
+
+    Args:
+        request: The request object
+
+    Raises:
+        AssertionError: If the required headers are not present
+
+    """
+    logger = get_logger(request)
+    if request.headers.get("x-proto-scheme") is None:
+        logger.error("check_required_headers.missing", header="X-Proto-Scheme")
+        msg = (
+            "'proxy_set_header X-Proto-Scheme $scheme' is required in your /auth "
+            "location in your nginx configuration file."
+        )
+        raise ImproperlyConfigured(msg)
+    # There's a problem here -- we'll always get the host header from the
+    # request, since if we don't use proxy_set_header, we'll get the host name
+    # from the proxy_pass line.  Thus, we use the X-Host header to get the host
+    # name from the request headers.
+    if request.headers.get("x-host") is None:
+        logger.error("check_required_headers.missing", header="X-Host")
+        msg = (
+            "'proxy_set_header X-Host $host' is required in your /auth "
+            "location in your nginx configuration file."
+        )
+        raise ImproperlyConfigured(msg)
+    logger.debug(
+        "check_required_headers.success",
+        x_proto_scheme=request.headers.get("x-proto-scheme"),
+        x_host=request.headers.get("x-host"),
+    )
+
+
 async def validate_service_url(request: Request, service: str | None = None) -> str:
     """
     Validate the service URL requested by the user.
     """
+    check_required_headers(request)
     base_url = (
-        f"{request.headers.get('x-proto-scheme')}://{request.headers.get('host')}"
+        f"{request.headers.get('x-proto-scheme')}://{request.headers.get('x-host')}"
     )
     if not service:
         service = request.query_params.get("service", "/")
@@ -389,18 +433,20 @@ async def duo(request: Request, service: str = "/") -> RedirectResponse:
             url=f"/auth/login?service={service}",
             status_code=status.HTTP_302_FOUND,
         )
+    check_required_headers(request)
     # Get the base URL from the request headers
     base_url = (
-        f"{request.headers.get('x-proto-scheme')}://{request.headers.get('host')}"
+        f"{request.headers.get('x-proto-scheme')}://{request.headers.get('x-host')}"
     )
-
+    redirect_uri = f"{base_url}/auth/duo/callback"
+    _logger.debug("auth.duo.redirect_uri", redirect_uri=redirect_uri)
     # Initialize Duo client
     try:
         duo_client = duo_universal.Client(
             client_id=cast("str", settings.duo_ikey),
             client_secret=cast("str", settings.duo_skey),
             host=cast("str", settings.duo_host),
-            redirect_uri=f"{base_url}/auth/duo/callback",
+            redirect_uri=redirect_uri,
         )
     except (ValueError, TypeError) as e:
         _logger.exception("auth.duo.client_creation_failed", error=str(e))
@@ -493,14 +539,16 @@ async def duo_callback(
 
     # Get the base URL from the request headers
     base_url = (
-        f"{request.headers.get('x-proto-scheme')}://{request.headers.get('host')}"
+        f"{request.headers.get('x-proto-scheme')}://{request.headers.get('x-host')}"
     )
+    redirect_uri = f"{base_url}/auth/duo/callback"
+    _logger.debug("auth.duo.callback.redirect_uri", redirect_uri=redirect_uri)
     # Initialize Duo client
     duo_client = duo_universal.Client(
         client_id=cast("str", settings.duo_ikey),
         client_secret=cast("str", settings.duo_skey),
         host=cast("str", settings.duo_host),
-        redirect_uri=f"{base_url}/auth/duo/callback",
+        redirect_uri=redirect_uri,
     )
 
     try:

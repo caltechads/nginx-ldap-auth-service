@@ -60,26 +60,91 @@ if you have multiple ``nginx`` servers all using the same
     proxy to ``nginx-ldap-auth-service``.  If you set them in the ``server``
     block, they will be ignored.
 
-CSRF Cookie in the /auth location [required]
 
-    In order for the login page to work, we need to pass the session cookie to
-    the auth service.  See :envvar:`CSRF_COOKIE_NAME` for more details on what
-    the name of the CSRF cookie will be for you.
+Mandatory Headers
+-----------------
 
-    Here's an example of how to set the cookie in the ``/auth`` location:
+The following headers are mandatory and must be set in the ``/auth`` location:
 
-    Example:
+- ``X-Proto-Scheme``
+- ``X-Host``
+- ``Cookie``
+
+In the ``/check-auth`` location, you must set the ``X-Cookie-Name`` header.
+See :ref:`nginx_header_config` for more details on how to set these headers.
+
+Cookie
+
+    The Cookies from the user's browser.  This is a mandatory header that is
+    used to pass the session cookie and CSRF cookie to the auth service.  It
+    should be set like so in the ``/auth`` and ``/check-auth`` locations:
 
     .. code-block:: nginx
-        :emphasize-lines: 4
+        :emphasize-lines: 3
 
         location /auth {
             proxy_pass http://nginx-ldap-auth-service:8888/auth;
-            proxy_set_header Cookie mycookie_csrf=$cookie_mycookie_csrf;
-
-            # other lines omitted for brevity
+            proxy_set_header Cookie $http_cookie;
         }
 
+X-Proto-Scheme
+
+    The protocol scheme to use for the auth service.  This is a mandatory header
+    that is used to build the redirect_uri for Duo MFA, and to validate the URL
+    requested by the user before auth.  It should be set like so in the ``/auth``
+    location:
+
+    .. code-block:: nginx
+        :emphasize-lines: 3
+
+        location /auth {
+            proxy_pass http://nginx-ldap-auth-service:8888/auth;
+            proxy_set_header X-Proto-Scheme $scheme;
+        }
+
+X-Host
+
+    The real hostname of the site that is requesting authentication.  This is a
+    **mandatory** header that is used to validate the URL requested by the user
+    before auth.  It should be set like so in the ``/auth`` location:
+
+    We're using ``X-Host`` instead of ``Host`` because the ``Host`` header is
+    ALWAYS set.  If you don't pass in the real hostname of the site, then Host
+    will be set to the hostname from the ``proxy_pass`` line.
+
+    .. code-block:: nginx
+        :emphasize-lines: 3
+
+        location /auth {
+            proxy_pass http://nginx-ldap-auth-service:8888/auth;
+            proxy_set_header X-Host $host;
+        }
+
+    .. note::
+        You may need to set this to a specific hostname if you are using a proxy or load balancer.
+
+        Example:
+
+        .. code-block:: nginx
+            :emphasize-lines: 3
+
+            location /auth {
+                proxy_pass http://nginx-ldap-auth-service:8888/auth;
+                proxy_set_header X-Host "www.example.com";
+            }
+
+Optional Headers
+----------------
+
+The following headers are optional and can be set in the ``/auth`` and ``/check-auth`` locations:
+
+- ``X-Cookie-Name``
+- ``X-Cookie-Domain``
+- ``X-Auth-Realm``
+- ``X-Authenticated-User``
+- ``X-Authorization-Filter``
+
+Or they can be set in the environment variables if you have a single backend.
 
 X-Cookie-Name
 
@@ -238,6 +303,18 @@ The following environment variables are available to configure
     * :envvar:`LDAP_AUTHORIZATION_FILTER`
     * :envvar:`AUTH_REALM`
     * :envvar:`SESSION_MAX_AGE`
+    * :envvar:`COOKIE_NAME`
+    * :envvar:`COOKIE_DOMAIN`
+    * :envvar:`CSRF_COOKIE_NAME`
+    * :envvar:`SESSION_MAX_AGE`
+    * :envvar:`USE_ROLLING_SESSIONS`
+    * :envvar:`SESSION_BACKEND`
+    * :envvar:`REDIS_URL`
+    * :envvar:`REDIS_PREFIX`
+    * :envvar:`DUO_ENABLED`
+    * :envvar:`DUO_HOST`
+    * :envvar:`DUO_IKEY`
+    * :envvar:`DUO_SKEY`
 
 LDAP (389, openldap, etc.)
 
@@ -342,7 +419,9 @@ These settings configure the login form and session handling.
 
 .. envvar:: REDIS_URL
 
-    The DSN to the Redis server.  See :py:attr:`nginx_ldap_auth.settings.Settings.redis_url` for details on the format of the DSN.
+    The DSN to the Redis server.  See
+    :py:attr:`nginx_ldap_auth.settings.Settings.redis_url` for details on the
+    format of the DSN.
 
     Defaults to ``None``
 

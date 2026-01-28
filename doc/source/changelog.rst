@@ -1,6 +1,21 @@
 CHANGELOG
 =========
 
+2.5.1 (2026-01-27)
+------------------
+
+Bugfixes
+^^^^^^^^
+
+- Added an internal test to notify the system administrator if the required headers are not set in the nginx configuration file.
+
+.. important::
+    Added this check because 2.5.0 and later needs the ``X-Proto-Scheme`` and
+    ``Host`` headers set via ``proxy_set_header`` in the ``/auth`` location of
+    the nginx configuration file.  See :ref:`nginx_header_config` for more
+    information.
+
+
 2.5.0 (2026-01-27)
 ------------------
 
@@ -15,9 +30,6 @@ Bugfixes
 ^^^^^^^^
 
 - The required settings in the nginx configuration file have been changed so that we can sanitize the url passed to the auth service to avoid an exploit allowing an attacker to redirect the user to a malicious service.
-
-.. important::
-    Everyone now needs to set the ``X-Proto-Scheme`` and ``Host`` headers via ``proxy_set_header`` in the ``/auth`` location.  See :ref:`nginx_header_config` for more information.
 
 2.4.2 (2026-01-16)
 ------------------

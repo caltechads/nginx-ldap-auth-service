@@ -3,6 +3,8 @@ VERSION = 2.5.0
 PACKAGE = nginx-ldap-auth-service
 
 DOCKER_REGISTRY = caltechads
+BASE_IMAGE = $(shell cat Dockerfile | grep "FROM" | cut -d' ' -f2 | head -1)
+
 #======================================================================
 
 image_name:
@@ -26,11 +28,15 @@ dist: clean
 	@uv build --sdist
 
 build:
+	@echo "Building ${PACKAGE}:${VERSION} from ${BASE_IMAGE}"
+	docker pull ${BASE_IMAGE}
 	docker build --platform linux/amd64,linux/arm64 --sbom=true --provenance=true -t ${PACKAGE}:${VERSION} .
 	docker tag ${PACKAGE}:${VERSION} ${PACKAGE}:latest
 	docker image prune -f
 
 force-build:
+	@echo "Force building ${PACKAGE}:${VERSION} from ${BASE_IMAGE}"
+	docker pull ${BASE_IMAGE}
 	docker build --platform linux/amd64,linux/arm64 --sbom=true --provenance=true --no-cache -t ${PACKAGE}:${VERSION} .
 	docker tag ${PACKAGE}:${VERSION} ${PACKAGE}:latest
 

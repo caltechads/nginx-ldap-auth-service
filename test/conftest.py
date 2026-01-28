@@ -60,6 +60,7 @@ def client(mock_user_manager):  # noqa: ARG001
         base_url="https://testserver",
         raise_server_exceptions=True,
         follow_redirects=False,
+        headers={"x-proto-scheme": "https", "x-host": "testserver"},
     ) as c:
         yield c
 

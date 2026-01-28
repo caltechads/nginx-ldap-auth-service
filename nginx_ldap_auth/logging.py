@@ -1,15 +1,12 @@
 import logging
 import logging.config
 import sys
-from typing import TYPE_CHECKING, Any, cast
+from typing import Any
 
 import structlog
 from fastapi import Request
 
 from nginx_ldap_auth.settings import Settings
-
-if TYPE_CHECKING:
-    from starlette.datastructures import Address
 
 settings = Settings()
 logger = structlog.get_logger("nginx_ldap_auth")
@@ -48,7 +45,7 @@ def get_logger(request: Request | None = None) -> structlog.BoundLogger:
         headers = Headers(scope=request)
         # Extract client host from scope directly to be safe
         client_host = "unknown"
-        if "client" in request and request["client"]:
+        if request.get("client") is not None:
             client_host = request["client"][0]
     elif hasattr(request, "headers"):
         headers = request.headers
@@ -63,14 +60,11 @@ def get_logger(request: Request | None = None) -> structlog.BoundLogger:
         client_host = "unknown"
 
     remote_ip = headers.get("x-forwarded-for")
-    if remote_ip:
-        remote_ip = remote_ip.split(",")[0]
-    else:
-        remote_ip = client_host
+    remote_ip = remote_ip.split(",")[0] if remote_ip else client_host
 
     return logger.bind(
         realm=headers.get("x-auth-realm", settings.auth_realm),
-        host=headers.get("host", "unknown"),
+        host=headers.get("x-host", headers.get("host", "unknown")),
         remote_ip=remote_ip,
     )
 
