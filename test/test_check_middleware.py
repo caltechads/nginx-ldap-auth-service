@@ -204,3 +204,35 @@ def test_x_authenticated_user_header(client, mock_user_manager):
     cookie = response.cookies.get("nginxauth")
     response = client.get("/check", cookies={"nginxauth": cookie})
     assert response.headers["x-authenticated-user"] == "testuser"
+
+
+def test_check_invalid_authorization_filter_header(client, mock_user_manager):
+    """
+    Test /check with an invalid X-Authorization-Filter header.
+    """
+    # 1. Login to get a session
+    login_response = client.post(
+        "/auth/login",
+        data={
+            "username": "testuser",
+            "password": "password",
+            "csrf_token": "dummy",
+            "service": "/check",
+        },
+    )
+    cookie = login_response.cookies.get("nginxauth")
+
+    # 2. Call /check with an invalid filter header
+    # This should raise a ValueError in the app, which FastAPI 
+    # will catch and return as a 500 Internal Server Error by default 
+    # if not explicitly handled.
+    try:
+        response = client.get(
+            "/check",
+            headers={"x-authorization-filter": "(invalid-filter"},
+            cookies={"nginxauth": cookie},
+        )
+        assert response.status_code == 500
+    except ValueError:
+        # If raise_server_exceptions=True, TestClient will raise the exception
+        pass

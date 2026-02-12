@@ -1,6 +1,16 @@
 CHANGELOG
 =========
 
+2.5.2 (2026-02-12)
+------------------
+
+Enhancements
+^^^^^^^^^^^^
+
+- @semidark Added the ``ALLOW_AUTHORIZATION_FILTER_HEADER`` setting.  If set to ``True``, the auth service will obey the ``X-Authorization-Filter`` header.  If set to ``False``, the ``X-Authorization-Filter`` header will be ignored.  Defaults to ``True`` for backwards compatibility.
+- Added validation of the ``X-Authorization-Filter`` header and the ``Settings.ldap_authorization_filter`` setting to ensure they are valid LDAP search filters.
+- Added validation of the ``Settings.ldap_get_user_filter`` setting to ensure it is a valid LDAP search filter.
+
 2.5.1 (2026-01-27)
 ------------------
 

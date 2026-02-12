@@ -268,6 +268,10 @@ X-Authorization-Filter
     :py:attr:`nginx_ldap_auth.settings.Settings.ldap_authorization_filter` for the
     ``nginx-ldap-auth-service`` instance.
 
+    .. important::
+        Since this is a per-user authorization filter, the filter must use the
+        ``{username}`` placeholder, and must be a valid LDAP search filter.
+
     This header can be used if multiple services with different LDAP filter requirements
     use the same ``nginx-ldap-auth-service`` instance (e.g different AD groups).
 
@@ -286,7 +290,15 @@ X-Authorization-Filter
         * Set :envvar:`ALLOW_AUTHORIZATION_FILTER_HEADER` to ``False`` and use only
           the :envvar:`LDAP_AUTHORIZATION_FILTER` environment variable, or
         * Ensure your NGINX configuration explicitly sets or clears this header
-          using ``proxy_set_header`` before forwarding requests.
+          using ``proxy_set_header`` before forwarding requests.  Like so:
+
+          .. code-block:: nginx
+            :emphasize-lines: 3
+
+            location /auth {
+              proxy_pass http://nginx-ldap-auth-service:8888/auth;
+              proxy_set_header X-Authorization-Filter "";
+            }
 
 .. _nginx-ldap-auth-service-env:
 

@@ -24,6 +24,7 @@ from starsessions.stores.redis import RedisStore
 from nginx_ldap_auth import __version__
 from nginx_ldap_auth.exc import ImproperlyConfigured
 from nginx_ldap_auth.settings import Settings
+from nginx_ldap_auth.validators import validate_ldap_search_filter
 
 from ..logging import get_logger
 from .forms import LoginForm
@@ -609,6 +610,9 @@ async def check_auth(request: Request, response: Response) -> dict[str, Any]:
         If the user is not authorized, the session is destroyed, and the user is
         status_code on ``response`` is set to 401.
 
+    Raises:
+        ValueError: The LDAP search filter is not a valid LDAP filter
+
     Args:
         request: The request object
         response: The response object
@@ -617,6 +621,7 @@ async def check_auth(request: Request, response: Response) -> dict[str, Any]:
         An empty dictionary.
 
     """
+    _logger = get_logger(request)
     cookie_name = request.headers.get("x-cookie-name", settings.cookie_name)
     if request.cookies.get(cookie_name):
         await load_session(request)
@@ -640,6 +645,18 @@ async def check_auth(request: Request, response: Response) -> dict[str, Any]:
                 ldap_authorization_filter: str | None = request.headers.get(
                     "x-authorization-filter", settings.ldap_authorization_filter
                 )
+                if ldap_authorization_filter:
+                    try:
+                        validate_ldap_search_filter(
+                            ldap_authorization_filter,
+                            ldap_username_attribute=settings.ldap_username_attribute,
+                            ldap_full_name_attribute=settings.ldap_full_name_attribute,
+                        )
+                    except ValueError as e:
+                        _logger.exception(
+                            "auth.check.invalid_authorization_filter", error=str(e)
+                        )
+                        raise
             else:
                 ldap_authorization_filter = settings.ldap_authorization_filter
             if not await User.objects.is_authorized(
@@ -723,14 +740,18 @@ async def nginx_ldap_auth_test(_: Request, response: Response) -> dict[str, Any]
     """
     A test endpoint to check if if the auth workflow is working.
 
+    Important:
+        This endpoint is only available if
+        :attr:`nginx_ldap_auth.settings.Settings.debug` is True.
+
     Args:
         _: The request object
         response: The response object
 
     Returns:
-        If :attr:`nginx_ldap_auth.settings.Settings.debug` is True, return a
-        dictionary containing the status of the test and the HTTP status code.
-        Otherwise, send 404 not found.
+        A dictionary containing the status of the test and the HTTP status code,
+        or an empty dictionary if the
+        :attr:`nginx_ldap_auth.settings.Settings.debug` is False.
 
     """
     if settings.debug:

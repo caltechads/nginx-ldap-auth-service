@@ -1,7 +1,10 @@
 from typing import Literal
 
+from ldap_filter import Filter, ParseError
 from pydantic import RedisDsn, ValidationError, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+from nginx_ldap_auth.validators import validate_ldap_search_filter
 
 
 class Settings(BaseSettings):
@@ -100,8 +103,9 @@ class Settings(BaseSettings):
     #: - ``{username_full_name_attribute}``: the value of
     #:   :py:class:`Settings.ldap_full_name_attribute`
     #:
-    #: Use ``{username}`` in the search filter as the placeholder for the username
-    #: supplied by the user from the login form.
+    #: The ``{username}`` placeholder must be present in the filter, as it is
+    #: used in the search filter as the placeholder for the username supplied by
+    #: the user from the login form.
     ldap_get_user_filter: str = "{username_attribute}={username}"
     #: The LDAP search filter to use to determine whether a user is authorized.  This
     #: should a valid LDAP search filter. If this is ``None``, all users who can
@@ -116,8 +120,9 @@ class Settings(BaseSettings):
     #: - ``{username_full_name_attribute}``: the value of
     #:   :py:attr:`ldap_full_name_attribute`
     #:
-    #: Use ``{username}`` in the search filter as the placeholder for the username
-    #: supplied by the user from the login form.
+    #: The ``{username}`` placeholder must be present in the filter, as it is
+    #: used in the search filter as the placeholder for the username supplied by
+    #: the user from the login form.
     ldap_authorization_filter: str | None = None
     #: Whether to allow the ``X-Authorization-Filter`` header to override
     #: :py:attr:`ldap_authorization_filter`. When set to ``True`` (the default),
@@ -204,4 +209,37 @@ class Settings(BaseSettings):
                     "is True"
                 )
                 raise ValidationError(msg)
+        return self
+
+    @model_validator(mode="after")  #: type: ignore
+    def ensure_authorization_filter_header_is_a_valid_ldap_filter(self):
+        """
+        Ensure that the authorization filter is a valid LDAP filter.
+
+        Raises:
+            ValidationError: The authorization filter is not a valid LDAP filter
+
+        """
+        if self.allow_authorization_filter_header and self.ldap_authorization_filter:
+            validate_ldap_search_filter(
+                self.ldap_authorization_filter,
+                ldap_username_attribute=self.ldap_username_attribute,
+                ldap_full_name_attribute=self.ldap_full_name_attribute,
+            )
+        return self
+
+    @model_validator(mode="after")  #: type: ignore
+    def ensure_get_user_filter_is_a_valid_ldap_filter(self):
+        """
+        Ensure that the get user filter is a valid LDAP filter.
+
+        Raises:
+            ValidationError: The get user filter is not a valid LDAP filter
+
+        """
+        validate_ldap_search_filter(
+            self.ldap_get_user_filter,
+            ldap_username_attribute=self.ldap_username_attribute,
+            ldap_full_name_attribute=self.ldap_full_name_attribute,
+        )
         return self
