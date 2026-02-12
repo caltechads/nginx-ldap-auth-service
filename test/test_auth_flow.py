@@ -87,3 +87,43 @@ def test_logout(client, mock_user_manager):
     response = client.get("/auth/logout", follow_redirects=False)
     assert response.status_code in (302, 307)
     assert response.headers["location"] == "/auth/login?service=/"
+
+
+def test_login_authorization_filter_header_ignored_when_disabled(
+    client, mock_user_manager, mock_settings
+):
+    """
+    Test that X-Authorization-Filter header is ignored during login when
+    allow_authorization_filter_header is False.
+    """
+    from unittest.mock import AsyncMock
+
+    # Disable header override
+    mock_settings.allow_authorization_filter_header = False
+    mock_settings.ldap_authorization_filter = "(group=allowed)"
+
+    # Make is_authorized return True only for the correct filter
+    def is_authorized_side_effect(username, filter_value):
+        # Return True only for the expected filter, False for malicious ones
+        return filter_value == "(group=allowed)"
+
+    mock_user_manager.is_authorized.side_effect = AsyncMock(
+        side_effect=is_authorized_side_effect
+    )
+
+    # Attempt login with malicious filter header (should be ignored)
+    response = client.post(
+        "/auth/login",
+        data={
+            "username": "testuser",
+            "password": "password",
+            "service": "/target",
+            "csrf_token": "dummy",
+        },
+        headers={"x-authorization-filter": "(objectClass=*)"},  # Malicious filter
+        follow_redirects=False,
+    )
+
+    # Should succeed because the setting filter is used, not the header
+    assert response.status_code == 302
+    assert response.headers["location"] == "/target"

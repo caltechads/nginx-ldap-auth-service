@@ -45,10 +45,12 @@ class LoginForm:
         * the user must exist in LDAP meaning that the user must be in the
           results of the ldap search
           named by :py:attr:`nginx_ldap_auth.settings.Settings.ldap_get_user_filter`
-        * If the ``X-Authorization-Filter`` header or
+        * If the ``X-Authorization-Filter`` header (when
+          :py:attr:`nginx_ldap_auth.settings.Settings.allow_authorization_filter_header`
+          is ``True``) or
           :py:attr:`nginx_ldap_auth.settings.Settings.ldap_authorization_filter`
-          is not ``None``, the user must be in the results of that LDAP search
-          The optional header will override the setting.
+          is not ``None``, the user must be in the results of that LDAP search.
+          The optional header will override the setting when allowed.
         * the bind to LDAP must be successful
 
         If all those tests pass, return ``True``.  Otherwise, return ``False``.
@@ -68,9 +70,12 @@ class LoginForm:
             # The user exists in LDAP
             user = cast("User", user)
             # Ensure that the user is authorized to access this service
-            ldap_authorization_filter: str = self.request.headers.get(
-                "x-authorization-filter", settings.ldap_authorization_filter
-            )
+            if settings.allow_authorization_filter_header:
+                ldap_authorization_filter: str | None = self.request.headers.get(
+                    "x-authorization-filter", settings.ldap_authorization_filter
+                )
+            else:
+                ldap_authorization_filter = settings.ldap_authorization_filter
             if not await User.objects.is_authorized(
                 cast("str", self.username), ldap_authorization_filter
             ):
