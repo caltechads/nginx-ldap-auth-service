@@ -57,10 +57,15 @@ def test_check_user_no_longer_exists(client, mock_user_manager):
     assert response.status_code == 401
 
 
-def test_check_with_authorization_filter_header(client, mock_user_manager):
+def test_check_with_authorization_filter_header(
+    client, mock_user_manager, mock_settings
+):
     """
-    Test /check with X-Authorization-Filter header.
+    Test /check with X-Authorization-Filter header when allowed.
     """
+    # Ensure header is allowed (default)
+    mock_settings.allow_authorization_filter_header = True
+
     # 1. Login
     login_response = client.post(
         "/auth/login",
@@ -91,6 +96,59 @@ def test_check_with_authorization_filter_header(client, mock_user_manager):
             break
     assert found, (
         "is_authorized was not called with (group=admin). "
+        f"Calls: {mock_user_manager.is_authorized.call_args_list}"
+    )
+
+
+def test_check_authorization_filter_header_ignored_when_disabled(
+    client, mock_user_manager, mock_settings
+):
+    """
+    Test that X-Authorization-Filter header is ignored when
+    allow_authorization_filter_header is False.
+    """
+    # Disable header override
+    mock_settings.allow_authorization_filter_header = False
+    mock_settings.ldap_authorization_filter = "(group=allowed)"
+
+    # 1. Login
+    login_response = client.post(
+        "/auth/login",
+        data={
+            "username": "testuser",
+            "password": "password",
+            "csrf_token": "dummy",
+            "service": "/check",
+        },
+    )
+    cookie = login_response.cookies.get("nginxauth")
+
+    # 2. Call /check with malicious filter header (should be ignored)
+    mock_user_manager.is_authorized.reset_mock()
+    mock_user_manager.is_authorized.side_effect = AsyncMock(return_value=True)
+    response = client.get(
+        "/check",
+        headers={"x-authorization-filter": "(objectClass=*)"},  # Malicious filter
+        cookies={"nginxauth": cookie},
+    )
+
+    assert response.status_code == 200
+    # Check that it was called with the setting value, NOT the header value
+    mock_user_manager.is_authorized.assert_called()
+    found_setting_filter = False
+    found_header_filter = False
+    for call in mock_user_manager.is_authorized.call_args_list:
+        if len(call.args) > 1:
+            if call.args[1] == "(group=allowed)":
+                found_setting_filter = True
+            if call.args[1] == "(objectClass=*)":
+                found_header_filter = True
+    assert found_setting_filter, (
+        "is_authorized should have been called with (group=allowed) from settings. "
+        f"Calls: {mock_user_manager.is_authorized.call_args_list}"
+    )
+    assert not found_header_filter, (
+        "is_authorized should NOT have been called with (objectClass=*) from header. "
         f"Calls: {mock_user_manager.is_authorized.call_args_list}"
     )
 

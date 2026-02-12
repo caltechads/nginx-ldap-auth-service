@@ -87,8 +87,14 @@ def mock_settings(mocker):
     """
     from nginx_ldap_auth.app.main import settings as app_settings
 
+    # Patch main.py settings
     mocker.patch.object(app_settings, "cookie_name", "nginxauth")
     mocker.patch.object(app_settings, "session_backend", "memory")
     mocker.patch.object(app_settings, "ldap_authorization_filter", None)
     mocker.patch.object(app_settings, "auth_realm", "Restricted")
+    mocker.patch.object(app_settings, "allow_authorization_filter_header", value=True)
+
+    # Patch forms.py settings to use the same object
+    mocker.patch("nginx_ldap_auth.app.forms.settings", app_settings)
+
     return app_settings

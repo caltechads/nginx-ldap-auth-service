@@ -119,6 +119,27 @@ class Settings(BaseSettings):
     #: Use ``{username}`` in the search filter as the placeholder for the username
     #: supplied by the user from the login form.
     ldap_authorization_filter: str | None = None
+    #: Whether to allow the ``X-Authorization-Filter`` header to override
+    #: :py:attr:`ldap_authorization_filter`. When set to ``True`` (the default),
+    #: the header value takes precedence over the environment variable setting.
+    #:
+    #: .. warning::
+    #:
+    #:    Setting this to ``True`` without properly configuring NGINX to control
+    #:    the ``X-Authorization-Filter`` header is a **security risk**. Malicious
+    #:    clients could send a permissive filter (e.g., ``(objectClass=*)``) to
+    #:    bypass group-based authorization restrictions.
+    #:
+    #:    For secure deployments, set this to ``False`` and use only the
+    #:    :envvar:`LDAP_AUTHORIZATION_FILTER` environment variable, or ensure your
+    #:    NGINX configuration explicitly sets or clears the header using
+    #:    ``proxy_set_header`` before forwarding requests.
+    #:
+    #: .. note::
+    #:
+    #:    The default is ``True`` for backwards compatibility. Future versions
+    #:    may change the default to ``False`` for improved security.
+    allow_authorization_filter_header: bool = True
     #: Number of seconds to wait for an LDAP connection to be established
     ldap_timeout: int = 15
     #: Min number of LDAP connections to keep in the pool

@@ -271,6 +271,23 @@ X-Authorization-Filter
     This header can be used if multiple services with different LDAP filter requirements
     use the same ``nginx-ldap-auth-service`` instance (e.g different AD groups).
 
+    .. warning::
+
+        This header is only respected when
+        :envvar:`ALLOW_AUTHORIZATION_FILTER_HEADER` is ``True`` (the default).
+
+        **Security Risk**: If this setting is enabled and your NGINX configuration
+        does not explicitly set or clear the ``X-Authorization-Filter`` header,
+        malicious clients could send a permissive filter (e.g., ``(objectClass=*)``)
+        to bypass group-based authorization restrictions.
+
+        For secure deployments, either:
+
+        * Set :envvar:`ALLOW_AUTHORIZATION_FILTER_HEADER` to ``False`` and use only
+          the :envvar:`LDAP_AUTHORIZATION_FILTER` environment variable, or
+        * Ensure your NGINX configuration explicitly sets or clears this header
+          using ``proxy_set_header`` before forwarding requests.
+
 .. _nginx-ldap-auth-service-env:
 
 Environment
@@ -545,6 +562,32 @@ These settings configure the LDAP server to use for authentication.
 
     The filter will within the base DN given by :envvar:`LDAP_BASEDN` and with
     scope of ``SUBTREE``.
+
+.. envvar:: ALLOW_AUTHORIZATION_FILTER_HEADER
+
+    Whether to allow the ``X-Authorization-Filter`` HTTP header to override
+    :envvar:`LDAP_AUTHORIZATION_FILTER`. Defaults to ``True`` for backwards
+    compatibility.
+
+    .. warning::
+
+        Setting this to ``True`` without properly configuring NGINX to control
+        the ``X-Authorization-Filter`` header is a **security risk**. Malicious
+        clients could send a permissive filter (e.g., ``(objectClass=*)``) to
+        bypass group-based authorization restrictions.
+
+        For secure deployments, set this to ``False`` and use only the
+        :envvar:`LDAP_AUTHORIZATION_FILTER` environment variable, or ensure your
+        NGINX configuration explicitly sets or clears the header using
+        ``proxy_set_header`` before forwarding requests.
+
+    .. note::
+
+        The default is ``True`` for backwards compatibility. Future versions
+        may change the default to ``False`` for improved security.
+
+    See :py:attr:`nginx_ldap_auth.settings.Settings.allow_authorization_filter_header`
+    for more details.
 
 .. envvar:: LDAP_TIMEOUT
 
