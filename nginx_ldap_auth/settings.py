@@ -1,6 +1,5 @@
 from typing import Literal
 
-from ldap_filter import Filter, ParseError
 from pydantic import RedisDsn, ValidationError, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
@@ -217,7 +216,8 @@ class Settings(BaseSettings):
         Ensure that the authorization filter is a valid LDAP filter.
 
         Raises:
-            ValidationError: The authorization filter is not a valid LDAP filter
+            ValueError: The authorization filter is not a valid LDAP filter
+            ValueError: The authorization filter does not use the {username} placeholder
 
         """
         if self.allow_authorization_filter_header and self.ldap_authorization_filter:
@@ -234,7 +234,8 @@ class Settings(BaseSettings):
         Ensure that the get user filter is a valid LDAP filter.
 
         Raises:
-            ValidationError: The get user filter is not a valid LDAP filter
+            ValueError: The get user filter is not a valid LDAP filter
+            ValueError: The get user filter does not use the {username} placeholder
 
         """
         validate_ldap_search_filter(
