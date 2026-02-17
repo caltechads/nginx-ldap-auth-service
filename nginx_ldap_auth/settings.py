@@ -30,6 +30,9 @@ class Settings(BaseSettings):
     #: user as to what they're logging into
     auth_realm: str = "Restricted"
 
+    #: Whether to run the web server without TLS
+    insecure: bool = False
+
     # ==================
     # Session
     # ==================
