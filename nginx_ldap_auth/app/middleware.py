@@ -39,8 +39,24 @@ class SessionMiddleware(StarsessionsSessionMiddleware):
     #: The header name for the cookie domain passed in by nginx.
     COOKIE_DOMAIN_HEADER: typing.Final[str] = "X-Cookie-Domain"
 
-    async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
-        if scope["type"] not in ("http", "websocket"):  # pragma: no cover
+    async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:  # noqa: PLR0915
+        """
+        Override the :py:meth:``__call__`` method to allow us to set the cookie
+        name and domain via the ``X-Cookie-Name`` and ``X-Cookie-Domain`` headers,
+        respectively.  If those headers are not present, the values from the
+        constructor are used.
+
+        We need this so that we can set the cookie name and domain dynamically based
+        on the request.  This is necessary because we may have multiple nginx severs
+        that use a single ``nginx_ldap_auth`` server for authentication.
+
+        Args:
+            scope: The scope of the request
+            receive: The receive function
+            send: The send function
+
+        """
+        if scope["type"] not in ("http", "websocket"):
             await self.app(scope, receive, send)
             return
 
