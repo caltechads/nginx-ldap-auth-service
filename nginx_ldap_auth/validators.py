@@ -1,6 +1,33 @@
 from ldap_filter import Filter, ParseError
 
 
+def _parse_ldap_search_filter(
+    filter_string: str,
+    ldap_username_attribute: str,
+    ldap_full_name_attribute: str,
+) -> None:
+    """
+    Parse an LDAP filter after formatting supported placeholders.
+
+    Raises:
+        ValueError: The LDAP search filter is not a valid LDAP filter
+    """
+    try:
+        # Filters can have placeholders for various values, so we need to
+        # format the filter with the actual values so that Filter.parse()
+        # won't blow up on the placeholders.
+        Filter.parse(
+            filter_string.format(
+                username_attribute=ldap_username_attribute,
+                username_full_name_attribute=ldap_full_name_attribute,
+                username="foo",
+            )
+        )
+    except ParseError as e:
+        msg = f"ldap_authorization_filter is not a valid LDAP filter: {e}"
+        raise ValueError(msg) from e
+
+
 def validate_ldap_search_filter(
     filter_string: str,
     ldap_username_attribute: str = "uid",
@@ -28,20 +55,11 @@ def validate_ldap_search_filter(
         ValueError: The LDAP search filter does not use the {username} placeholder
 
     """
-    try:
-        # Filters can have placeholders for various values, so we need to
-        # format the filter with the actual values so that Filter.parse()
-        # won't blow up on the placeholders.
-        _filter = Filter.parse(
-            filter_string.format(
-                username_attribute=ldap_username_attribute,
-                username_full_name_attribute=ldap_full_name_attribute,
-                username="foo",
-            )
-        )
-    except ParseError as e:
-        msg = f"ldap_authorization_filter is not a valid LDAP filter: {e}"
-        raise ValueError(msg) from e
+    _parse_ldap_search_filter(
+        filter_string,
+        ldap_username_attribute=ldap_username_attribute,
+        ldap_full_name_attribute=ldap_full_name_attribute,
+    )
 
     # Now check that the filter actually uses the {username} placeholder
     if "{username}" not in filter_string:

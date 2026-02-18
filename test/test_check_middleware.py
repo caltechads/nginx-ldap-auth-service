@@ -82,7 +82,9 @@ def test_check_with_authorization_filter_header(
     mock_user_manager.is_authorized.side_effect = AsyncMock(return_value=False)
     response = client.get(
         "/check",
-        headers={"x-authorization-filter": "(group=admin)"},
+        headers={
+            "x-authorization-filter": "(&(group=admin)({username_attribute}={username}))"
+        },
         cookies={"nginxauth": cookie},
     )
 
@@ -91,11 +93,14 @@ def test_check_with_authorization_filter_header(
     mock_user_manager.is_authorized.assert_called()
     found = False
     for call in mock_user_manager.is_authorized.call_args_list:
-        if len(call.args) > 1 and call.args[1] == "(group=admin)":
+        if (
+            len(call.args) > 1
+            and call.args[1] == "(&(group=admin)({username_attribute}={username}))"
+        ):
             found = True
             break
     assert found, (
-        "is_authorized was not called with (group=admin). "
+        "is_authorized was not called with expected filter header. "
         f"Calls: {mock_user_manager.is_authorized.call_args_list}"
     )
 
