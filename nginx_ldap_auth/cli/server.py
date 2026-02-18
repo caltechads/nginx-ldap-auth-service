@@ -42,6 +42,12 @@ def print_settings():
     help="Reload the server on code changes.",
 )
 @click.option(
+    "--insecure",
+    default=lambda: os.environ.get("INSECURE", "False") == "True",
+    type=bool,
+    help="If the server should run over HTTP instead of HTTPS.",
+)
+@click.option(
     "--keyfile",
     "-k",
     default=lambda: os.environ.get("SSL_KEYFILE", "/certs/server.key"),
@@ -54,12 +60,6 @@ def print_settings():
     default=lambda: os.environ.get("SSL_CERTFILE", "/certs/server.crt"),
     type=click.Path(exists=True, dir_okay=False),
     help="The path to the SSL certificate file.",
-)
-@click.option(
-    "--insecure",
-    default=lambda: os.environ.get("INSECURE", "False") == "True",
-    type=bool,
-    help="If the server should run over HTTP instead of HTTPS.",
 )
 @click.option(
     "--workers",
