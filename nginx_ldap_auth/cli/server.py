@@ -10,6 +10,17 @@ from .cli import cli
 settings = Settings()
 
 
+def ssl_enabled() -> bool:
+    """
+    Check if SSL/TLS is enabled.
+    SSL is enabled by default.
+    SSL is only disabled when the "insecure" configuration option is set to True.
+    Returns: True if SSL/TLS is enabled
+    """
+    is_ssl_enabled: bool = not settings.insecure
+    return is_ssl_enabled
+
+
 @cli.command("settings", short_help="Print our application settings.")
 def print_settings():
     """
@@ -51,14 +62,14 @@ def print_settings():
     "--keyfile",
     "-k",
     default=lambda: os.environ.get("SSL_KEYFILE", "/certs/server.key"),
-    type=click.Path(exists=True, dir_okay=False),
+    type=click.Path(exists=ssl_enabled(), dir_okay=False),
     help="The path to the SSL key file.",
 )
 @click.option(
     "--certfile",
     "-c",
     default=lambda: os.environ.get("SSL_CERTFILE", "/certs/server.crt"),
-    type=click.Path(exists=True, dir_okay=False),
+    type=click.Path(exists=ssl_enabled(), dir_okay=False),
     help="The path to the SSL certificate file.",
 )
 @click.option(
