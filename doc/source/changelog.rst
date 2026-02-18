@@ -1,7 +1,16 @@
 CHANGELOG
 =========
 
-2.5.2 (2026-02-12)
+2.6.1 (2026-02-18)
+------------------
+
+Enhancements
+^^^^^^^^^^^^
+
+- @kblum added the ``INSECURE`` setting.  If set to ``True``, the auth service will run over HTTP instead of HTTPS.  Defaults to ``False``.
+- Updated all dependencies to the latest versions, again for the Dockerhub image.
+
+2.6.0 (2026-02-12)
 ------------------
 
 Enhancements
