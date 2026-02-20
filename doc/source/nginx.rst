@@ -113,6 +113,9 @@ Things to note:
             # and to validate the URL requested by the user before auth.
             proxy_set_header X-Proto-Scheme $scheme;
             proxy_set_header X-Host $host;
+            # If you are not using X-Authorization-Filter in your configuration, block it
+            # so that malicious clients can't use it to bypass our settings
+            # proxy_set_header X-Authorization-Filter "";
         }
 
         location /check-auth {

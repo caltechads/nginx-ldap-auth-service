@@ -82,7 +82,9 @@ def test_check_with_authorization_filter_header(
     mock_user_manager.is_authorized.side_effect = AsyncMock(return_value=False)
     response = client.get(
         "/check",
-        headers={"x-authorization-filter": "(group=admin)"},
+        headers={
+            "x-authorization-filter": "(&(group=admin)({username_attribute}={username}))"
+        },
         cookies={"nginxauth": cookie},
     )
 
@@ -91,11 +93,14 @@ def test_check_with_authorization_filter_header(
     mock_user_manager.is_authorized.assert_called()
     found = False
     for call in mock_user_manager.is_authorized.call_args_list:
-        if len(call.args) > 1 and call.args[1] == "(group=admin)":
+        if (
+            len(call.args) > 1
+            and call.args[1] == "(&(group=admin)({username_attribute}={username}))"
+        ):
             found = True
             break
     assert found, (
-        "is_authorized was not called with (group=admin). "
+        "is_authorized was not called with expected filter header. "
         f"Calls: {mock_user_manager.is_authorized.call_args_list}"
     )
 
@@ -204,3 +209,35 @@ def test_x_authenticated_user_header(client, mock_user_manager):
     cookie = response.cookies.get("nginxauth")
     response = client.get("/check", cookies={"nginxauth": cookie})
     assert response.headers["x-authenticated-user"] == "testuser"
+
+
+def test_check_invalid_authorization_filter_header(client, mock_user_manager):
+    """
+    Test /check with an invalid X-Authorization-Filter header.
+    """
+    # 1. Login to get a session
+    login_response = client.post(
+        "/auth/login",
+        data={
+            "username": "testuser",
+            "password": "password",
+            "csrf_token": "dummy",
+            "service": "/check",
+        },
+    )
+    cookie = login_response.cookies.get("nginxauth")
+
+    # 2. Call /check with an invalid filter header
+    # This should raise a ValueError in the app, which FastAPI 
+    # will catch and return as a 500 Internal Server Error by default 
+    # if not explicitly handled.
+    try:
+        response = client.get(
+            "/check",
+            headers={"x-authorization-filter": "(invalid-filter"},
+            cookies={"nginxauth": cookie},
+        )
+        assert response.status_code == 500
+    except ValueError:
+        # If raise_server_exceptions=True, TestClient will raise the exception
+        pass

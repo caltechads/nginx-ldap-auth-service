@@ -10,6 +10,21 @@ from .cli import cli
 settings = Settings()
 
 
+def ssl_required() -> bool:
+    """
+    Check if SSL/TLS is required by our configuration.
+
+    - SSL is enabled by default.
+    - SSL is only disabled when the :envvar:`INSECURE` environment variable is
+      set to True.
+
+    Returns:
+        True if SSL/TLS is enabled, False otherwise.
+
+    """
+    return not settings.insecure
+
+
 @cli.command("settings", short_help="Print our application settings.")
 def print_settings():
     """
@@ -42,24 +57,24 @@ def print_settings():
     help="Reload the server on code changes.",
 )
 @click.option(
+    "--insecure",
+    default=settings.insecure,
+    type=bool,
+    help="If the server should run over HTTP instead of HTTPS.",
+)
+@click.option(
     "--keyfile",
     "-k",
     default=lambda: os.environ.get("SSL_KEYFILE", "/certs/server.key"),
-    type=click.Path(exists=True, dir_okay=False),
+    type=click.Path(exists=ssl_required(), dir_okay=False),
     help="The path to the SSL key file.",
 )
 @click.option(
     "--certfile",
     "-c",
     default=lambda: os.environ.get("SSL_CERTFILE", "/certs/server.crt"),
-    type=click.Path(exists=True, dir_okay=False),
+    type=click.Path(exists=ssl_required(), dir_okay=False),
     help="The path to the SSL certificate file.",
-)
-@click.option(
-    "--insecure",
-    default=lambda: os.environ.get("INSECURE", "False") == "True",
-    type=bool,
-    help="If the server should run over HTTP instead of HTTPS.",
 )
 @click.option(
     "--workers",

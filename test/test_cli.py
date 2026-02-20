@@ -1,3 +1,4 @@
+import importlib
 from unittest.mock import patch
 
 from click.testing import CliRunner
@@ -40,6 +41,68 @@ def test_cli_start_help():
     assert "Start the nginx_ldap_auth service." in result.output
     assert "--host" in result.output
     assert "--port" in result.output
+
+
+def test_ssl_required_reflects_settings(monkeypatch):
+    """
+    Test that ssl_required follows the settings.insecure value.
+    """
+    from nginx_ldap_auth.cli import server
+
+    monkeypatch.setattr(server.settings, "insecure", False)
+    assert server.ssl_required() is True
+
+    monkeypatch.setattr(server.settings, "insecure", True)
+    assert server.ssl_required() is False
+
+
+def test_cli_ssl_option_path_validation_uses_ssl_required():
+    """
+    Test that certfile/keyfile path validators use ssl_required.
+    """
+    from nginx_ldap_auth.cli import server
+
+    keyfile_option = next(
+        param for param in server.start.params if param.name == "keyfile"
+    )
+    certfile_option = next(
+        param for param in server.start.params if param.name == "certfile"
+    )
+
+    assert keyfile_option.type.exists is server.ssl_required()
+    assert certfile_option.type.exists is server.ssl_required()
+
+
+def test_cli_start_insecure_env_skips_ssl_file_existence_check(monkeypatch):
+    """
+    Test that INSECURE=True disables SSL file existence checks at option setup.
+    """
+    import nginx_ldap_auth.cli.server as server_module
+
+    monkeypatch.setenv("INSECURE", "True")
+    reloaded_server = importlib.reload(server_module)
+    try:
+        keyfile_option = next(
+            param for param in reloaded_server.start.params if param.name == "keyfile"
+        )
+        certfile_option = next(
+            param for param in reloaded_server.start.params if param.name == "certfile"
+        )
+        assert keyfile_option.type.exists is False
+        assert certfile_option.type.exists is False
+
+        runner = CliRunner()
+        with patch("uvicorn.run") as mock_run:
+            result = runner.invoke(reloaded_server.cli, ["start"])
+
+        assert result.exit_code == 0
+        mock_run.assert_called_once()
+        kwargs = mock_run.call_args.kwargs
+        assert "ssl_keyfile" not in kwargs
+        assert "ssl_certfile" not in kwargs
+    finally:
+        monkeypatch.delenv("INSECURE", raising=False)
+        importlib.reload(server_module)
 
 
 @patch("uvicorn.run")

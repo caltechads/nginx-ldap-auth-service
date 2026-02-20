@@ -1,4 +1,4 @@
-from typing import ClassVar, Optional, cast
+from typing import ClassVar, cast
 
 import bonsai
 from bonsai.errors import (
@@ -142,7 +142,9 @@ class UserManager:
         """
         return await self.get(username) is not None
 
-    async def is_authorized(self, username: str, ldap_authorization_filter: str | None) -> bool:
+    async def is_authorized(
+        self, username: str, ldap_authorization_filter: str | None
+    ) -> bool:
         """
         Test whether the user is authorized to log in.  This is done by
         performing an LDAP search using the filter specified in a header or
@@ -200,7 +202,7 @@ class UserManager:
             raise
         return len(results) > 0
 
-    async def get(self, username: str) -> Optional["User"]:
+    async def get(self, username: str) -> "User | None":
         """
         Get a user from the LDAP directory, and return it as a :py:class:`User`.
         When getting the user, we will use the LDAP search filter specified in

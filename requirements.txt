@@ -68,6 +68,8 @@ jinja2==3.1.5
     # via
     #   nginx-ldap-auth-service (pyproject.toml)
     #   sphinx
+ldap-filter==1.0.1
+    # via nginx-ldap-auth-service (pyproject.toml)
 markupsafe==3.0.2
     # via jinja2
 mirakuru==3.0.1

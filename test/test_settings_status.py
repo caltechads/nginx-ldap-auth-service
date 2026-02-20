@@ -13,6 +13,7 @@ def test_settings_default():
     assert settings.cookie_name == "nginxauth"
     assert settings.session_backend == "memory"
     assert settings.ldap_starttls is True
+    assert settings.insecure is False
 
 
 def test_settings_env_override():
@@ -25,12 +26,14 @@ def test_settings_env_override():
             "COOKIE_NAME": "custom_cookie",
             "SESSION_BACKEND": "redis",
             "REDIS_URL": "redis://localhost:6379/0",
+            "INSECURE": "True",
         },
     ):
         settings = Settings()
         assert settings.cookie_name == "custom_cookie"
         assert settings.session_backend == "redis"
         assert str(settings.redis_url) == "redis://localhost:6379/0"
+        assert settings.insecure is True
 
 
 def test_status_endpoint(client, mock_user_manager):
