@@ -16,11 +16,8 @@ services:
   nginx_ldap_auth_service:
     image: nginx-ldap-auth-service:latest
     hostname: nginx-ldap-auth-service
-    # Port 8888 is intentionally NOT exposed to host for security.
-    # The auth service should only be accessible from nginx within the Docker network.
-    # Direct external access would allow header injection attacks (X-Ldap-User spoofing).
-    expose:
-      - "8888"
+    ports:
+      - "8888:8888"
     env_file:
       - .env
     container_name: nginx-ldap-auth-service
