@@ -1,0 +1,16 @@
+---
+description: 
+alwaysApply: true
+---
+
+## AiDex - Use for ALL code searches
+
+**Default:** Whenever you would grep for a symbol/name (class, function, variable), use AiDex first. Do **not** use grep for that when the project has a `.aidex/` directory. Never use grep to find where a class/function/variable is defined or used when `.aidex/` exists.
+
+**Tools (MCP server `user-aidex`):**
+- `aidex_query` — Find classes, functions, variables by name (path + term; mode: exact/contains/starts_with). Use this instead of grep for "where is X defined/used."
+- `aidex_signature` — All methods in one file with line numbers
+- `aidex_signatures` — Methods from multiple files (glob pattern)
+- `aidex_summary` — Project overview and entry points
+
+**Workflow:** When finding how/where something is used or defined (e.g. "how is X used?", "where is X defined?", "where is X used?"), call `aidex_query` with the project path and the symbol name, then use those results (and read the listed files if needed). Only use grep if AiDex is unavailable or returns no results.

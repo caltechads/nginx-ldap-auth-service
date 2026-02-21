@@ -1,0 +1,486 @@
+---
+description: Testing Guide
+globs: ['*.py', 'test_*.py', '*_test.py', 'test/']
+keywords: ['test coverage', 'write tests', 'write test', 'pytest', 'testing', 'unit test', 'integration test', 'test']
+alwaysApply: false
+---
+
+# Testing Guide
+
+This guide covers how to write tests for a Python project.
+
+In this guide, `<project>` is the name of the main python folder in the project.
+
+## Conventions
+
+In this guide,
+
+- Lines prefixed with `[AI]` are instructions for AI agents; humans should ignore these lines.
+- Lines with no prefix are instructions for both humans and AI agents.
+- Parts with the title `AI Instructions` are instructions for AI agents only.
+
+## Test Categories
+
+The test suite includes several categories:
+
+- **Unit tests**: Test individual functions and classes
+- **Integration tests**: Test with real Terraform projects
+- **CLI tests**: Test command-line interface functionality
+- **Model tests**: Test Pydantic model validation
+- **Service tests**: Test business logic services
+
+## Test Naming Conventions
+
+- Test files should be in the `tests/` directory at the top level of the project.
+- Test files: `test_<module>.py`
+- Test classes: `Test<ClassName>`
+- Test methods: `test_<description>`
+- Orgainze tests into test classes when possible. If you just have a single test method, you can use a function instead of a class.
+- Try not to make a single huge test class, but break it up logically by function. You can put multiple test classes in the same file.
+
+## General Test Guidelines
+
+- Use `pytest` for testing.
+- Use `pytest.mark.unit` to mark unit tests.
+- Use `pytest.mark.integration` to mark integration tests.
+- Use `pytest.mark.cli` to mark CLI tests.
+- Use `pytest.mark.model` to mark model tests.
+- Use `pytest.mark.service` to mark business logic tests not related to models.
+- Use `pytest.mark.integration` to mark integration tests.
+- Use your best judgment on other test categories.
+
+## pytest Configuration
+
+The test configuration is defined in `pyproject.toml`:
+
+```toml
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+addopts = [
+    "--strict-markers",
+    "--strict-config",
+    "--cov=<project>",
+    "--cov-report=term-missing",
+    "--cov-report=html",
+]
+```
+
+## Installing extra test related packages
+
+If you need to install extra test related packages, you can do so like so:
+
+```bash
+uv add --group=test <package>
+```
+
+## Fixtures
+
+Create reusable test data with fixtures:
+
+```python
+@pytest.fixture
+def sample_config():
+    """Sample pydantic settings configuration for testing."""
+    return Settings(
+        aws_region="us-west-2",
+        aws_profile="test",
+        aws_role_arn="arn:aws:iam::123456789012:role/test",
+    )
+
+def test_parse_config(sample_config):
+    """Test parsing pydantic settings configuration."""
+    # Use the fixture
+    config = sample_config
+    assert config.aws_region == "us-west-2"
+```
+
+### Creating Fixtures
+
+- Define fixtures in test files if they only apply to that test
+- Define global fixtures in `tests/fixtures/conftest.py`:
+
+```python
+# In conftest.py
+@pytest.fixture
+def mock_aws_session():
+    """Mock AWS session for testing."""
+    session = Mock()
+    session.client.return_value = Mock()
+    return session
+
+# In test file
+def test_aws_functionality(mock_aws_session):
+    """Test AWS functionality with mocked session."""
+    with patch("boto3.Session", return_value=mock_aws_session):
+        # Test code here
+        pass
+```
+
+## Unit Test Guidelines
+
+1. **Test one thing at a time**: Each test should verify a single behavior
+2. **Use descriptive names**: Test names should clearly describe what is being tested
+3. **Arrange-Act-Assert**: Structure tests with setup, execution, and verification
+4. **Use fixtures**: Reuse common test data and setup
+5. **Mock external dependencies**: Don't rely on external services in unit tests
+
+Example unit test:
+
+```python
+def test_read_local_state_valid(tmp_path):
+    """Test reading valid local state file."""
+    # Arrange
+    state_file = tmp_path / "terraform.tfstate"
+    state_content = {
+        "version": 4,
+        "terraform_version": "1.5.0",
+        "serial": 1,
+        "lineage": "12345678-1234-1234-1234-123456789012",
+        "outputs": {"test": {"value": "test"}},
+        "resources": [],
+    }
+    state_file.write_text(json.dumps(state_content))
+
+    # Act
+    result = read_local_state(state_file)
+
+    # Assert
+    assert result["version"] == 4
+    assert result["terraform_version"] == "1.5.0"
+    assert result["outputs"]["test"]["value"] == "test"
+```
+
+### Mocking Guidelines
+
+- Use `unittest.mock.Mock` for mocking, and `unittest.mock.patch` for patching.
+
+:::: important ::: title Important :::
+
+Mock ONLY the external dependencies, like calls to extrnal services like databases, AWS, API calls, Redis, etc. Do not mock the internal code. We want as much of the internal code as possible to be tested.
+
+If you can't figure out where to mock something, ask the human for help. ::::
+
+Example:
+
+```python
+from unittest.mock import Mock, patch
+
+def test_read_s3_state_valid():
+    """Test reading valid S3 state file."""
+    # Mock AWS session and S3 client
+    mock_response = Mock()
+    mock_response.__getitem__ = Mock(return_value=Mock())
+    mock_response.__getitem__.return_value.read.return_value = json.dumps({
+        "version": 4,
+        "terraform_version": "1.5.0"
+    }).encode("utf-8")
+
+    mock_s3 = Mock()
+    mock_s3.get_object.return_value = mock_response
+
+    mock_session = Mock()
+    mock_session.client.return_value = mock_s3
+
+    with patch("tfmate.services.state_access.s3.CredentialManager") as mock_manager:
+        mock_manager.return_value.create_aws_session.return_value = mock_session
+
+        result = read_s3_state(config, credentials)
+        assert result["version"] == 4
+```
+
+## Integration Test Guidelines
+
+The goal of integration tests is to test the tool with real data.
+
+1. **Be flexible**: Don't make assumptions about specific resource counts or values
+2. **Test functionality**: Focus on whether the tool can successfully parse and access data
+3. **Handle missing prerequisites**: Skip gracefully when requirements aren't met
+4. **Use environment variables**: Use environment variables to point to the real data or backends.
+5. **Skip tests**: Skip tests if the required environment variable(s) are not set, and do not run them.
+6. **Warn the user about destructive tests**: Warn the user about destructive tests (things that will destroy or modify data), and ask them to confirm before running them.
+
+- Use `pytest.mark.integration` to mark integration tests.
+- Put integration tests in the `tests/integration/` directory.
+
+Example integration test that needs a path to a real directory to run:
+
+```python
+@pytest.mark.integration
+def test_real_terraform_project():
+    """Test with a real backend."""
+    project_path = os.getenv('REAL_PROJECT_PATH')
+    if not project_path:
+        pytest.skip("REAL_PROJECT_PATH environment variable not set")
+
+    project_dir = Path(project_path)
+    if not project_dir.exists():
+        pytest.skip(f"Project path does not exist: {project_path}")
+
+    # Test that we can parse the configuration
+    parser = TerraformParser()
+    config = parser.parse_directory(project_dir)
+    assert config is not None
+
+    # Test backend detection
+    detector = StateDetector()
+    backend = detector.detect_state_location(config)
+    assert backend.type in {'local', 's3', 'http', 'remote'}
+```
+
+Running Integration Tests:
+
+```bash
+# Run integration tests only
+pytest -v -k integration
+```
+
+### Unit Test Mocking Guidelines
+
+Use mocking for external dependencies:
+
+```python
+from unittest.mock import Mock, patch
+
+def test_read_s3_state_valid():
+    """Test reading valid S3 state file."""
+    # Mock AWS session and S3 client
+    mock_response = Mock()
+    mock_response.__getitem__ = Mock(return_value=Mock())
+    mock_response.__getitem__.return_value.read.return_value = json.dumps({
+        "version": 4,
+        "terraform_version": "1.5.0"
+    }).encode("utf-8")
+
+    mock_s3 = Mock()
+    mock_s3.get_object.return_value = mock_response
+
+    mock_session = Mock()
+    mock_session.client.return_value = mock_s3
+
+    with patch("tfmate.services.state_access.s3.CredentialManager") as mock_manager:
+        mock_manager.return_value.create_aws_session.return_value = mock_session
+
+        result = read_s3_state(config, credentials)
+        assert result["version"] == 4
+```
+
+### Error Testing
+
+Always test error conditions:
+
+```python
+def test_invalid_input_raises_error():
+    """Test that invalid input raises appropriate error."""
+    with pytest.raises(ValidationError) as exc_info:
+        Service(name="", service_id="test")
+
+    assert "String should have at least 1 character" in str(exc_info.value)
+
+def test_file_not_found_raises_error(tmp_path):
+    """Test that missing file raises appropriate error."""
+    missing_file = tmp_path / "nonexistent.json"
+
+    with pytest.raises(FileNotFoundError) as exc_info:
+        read_file(missing_file)
+
+    assert "No such file or directory" in str(exc_info.value)
+```
+
+### Performance Testing
+
+Ask the user if they want to test performance of any of the code. It they do, ask them to describe what they want performance testing on.
+
+Test performance for critical operations:
+
+```python
+def test_aws_services_performance(benchmark):
+    """Test AWS services listing performance."""
+    def list_services():
+        session = botocore.session.get_session()
+        return session.get_available_services()
+
+    result = benchmark(list_services)
+    assert len(result) > 0
+```
+
+### Edge Cases
+
+Test edge cases and boundary conditions:
+
+```python
+def test_empty_state_file(tmp_path):
+    """Test handling of empty state file."""
+    state_file = tmp_path / "empty.tfstate"
+    state_file.write_text("{}")
+
+    with pytest.raises(StateFileError):
+        read_local_state(state_file)
+
+def test_malformed_json(tmp_path):
+    """Test handling of malformed JSON."""
+    state_file = tmp_path / "malformed.tfstate"
+    state_file.write_text("{ invalid json")
+
+    with pytest.raises(StateFileError):
+        read_local_state(state_file)
+```
+
+### CLI Testing Patterns
+
+Test CLI commands with various options:
+
+```python
+def test_cli_help():
+    """Test CLI help output."""
+    runner = CliRunner()
+    result = runner.invoke(cli, ['--help'])
+
+    assert result.exit_code == 0
+    assert "Terraform maintenance tool" in result.output
+
+def test_aws_services_with_options():
+    """Test aws services command with various options."""
+    runner = CliRunner()
+
+    # Test with filter
+    result = runner.invoke(cli, ['aws', 'services', '--filter', 'ec*'])
+    assert result.exit_code == 0
+
+    # Test with sort
+    result = runner.invoke(cli, ['aws', 'services', '--sort-by', 'api_version'])
+    assert result.exit_code == 0
+
+    # Test with verbose
+    result = runner.invoke(cli, ['--verbose', 'aws', 'services'])
+    assert result.exit_code == 0
+```
+
+### Testing Error Handling
+
+Test CLI error handling:
+
+```python
+def test_nonexistent_directory():
+    """Test CLI with nonexistent directory."""
+    runner = CliRunner()
+    result = runner.invoke(cli, ['analyze', 'config', '--directory', '/nonexistent'])
+
+    assert result.exit_code == 1
+    assert "Error" in result.output
+
+def test_invalid_output_format():
+    """Test CLI with invalid output format."""
+    runner = CliRunner()
+    result = runner.invoke(cli, ['--output', 'invalid', 'aws', 'services'])
+
+    assert result.exit_code == 2  # Click error code for invalid choice
+```
+
+### Debugging Failed Tests
+
+Use pytest debugging features:
+
+```bash
+# Run with maximum verbosity
+pytest -vvv
+
+# Stop on first failure
+pytest -x
+
+# Show local variables on failure
+pytest -l
+
+# Run with debugger
+pytest --pdb
+
+# Run specific failing test
+pytest tests/test_specific.py::test_failing_method -vvv
+```
+
+### Common Test Issues
+
+1. **Mock setup issues**: Ensure mocks are properly configured
+2. **Path issues**: Use `tmp_path` fixture for file operations
+3. **Environment issues**: Check environment variables and dependencies
+4. **Timing issues**: Use appropriate timeouts for external calls
+
+Example debugging session:
+
+```python
+def test_debug_example(tmp_path):
+    """Example of debugging a test."""
+    # Add debug prints
+    print(f"Working directory: {tmp_path}")
+
+    # Use pdb for interactive debugging
+    import pdb; pdb.set_trace()
+
+    # Test code here
+    pass
+```
+
+### Keeping Tests Updated
+
+1. **Update tests when code changes**: Ensure tests reflect current behavior
+2. **Review test coverage**: Maintain good coverage of critical paths
+3. **Remove obsolete tests**: Delete tests for removed functionality
+4. **Update fixtures**: Keep test data current
+
+### Test Documentation
+
+Document complex tests:
+
+```python
+def test_complex_integration_scenario():
+    """
+    Test complex integration scenario with multiple backends.
+
+    This test verifies that <project> can handle:
+    1. S3 backend with assume role
+    2. HTTP backend with authentication
+    3. TFE backend with workspace lookup
+
+    Prerequisites:
+    - TFTEST_PROJECT_PATH environment variable set
+    - AWS credentials configured
+    - TFE token available
+    """
+    # Test implementation
+    pass
+```
+
+### Development Workflow
+
+1. **Write tests first**: Follow TDD principles
+2. **Run tests frequently**: Test as you develop
+3. **Use watch mode**: Automatically run tests on file changes
+4. **Check coverage**: Ensure new code is tested
+
+### Basic Test Execution
+
+**Important**: You MUST run the tests using the code in the virtual environment. **Important**: Remember to activate the virtual environment before running tests by doing `source .venv/bin/activate` at the top level of the project.
+
+To run all tests:
+
+```bash
+# Run all tests
+pytest
+
+# Run with verbose output
+pytest -v
+
+# Run with coverage
+pytest --cov=tfmate
+
+# Run specific test file
+pytest tests/<file_name>.py
+
+# Run specific test class
+pytest tests/<file_name>.py::Test<ClassName>
+
+# Run specific test method
+pytest tests/<file_name>.py::Test<ClassName>::test_<method_name>
+```

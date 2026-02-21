@@ -1,0 +1,51 @@
+---
+description: Project Documentation
+globs: ['*.rst', 'docs/', 'doc/']
+keywords: ['sphinx', 'write docs', 'documentation', 'create docs', 'document']
+alwaysApply: false
+---
+
+## Documentation Guidelines
+
+- Documentation lives in the `doc/source` directory. This is the root of the documentation project.
+- Use Sphinx to document the project in RestructuredText format, in Napoleon format.
+- Use the `.. code-block:: python` directive to format code examples.
+- Use the `.. code-block:: bash` directive to format shell commands.
+- Use the `.. code-block:: text` directive to format text.
+- Use the `.. code-block:: json` directive to format JSON.
+- Use the `.. code-block:: hcl` directive to format HCL/Terraform code.
+- And so on.
+- Use example code liberally. This is a good way to explain how to use the code.
+- Please ensure that all headings are properly formatted.
+  - Use the recommendations in [Parts, Chapters, Titles, Sections](https://lpn-doc-sphinx-primer-devel.readthedocs.io/concepts/heading.html) to organize your heading hierarchy.
+  - The top level heading of the `doc/source/index.rst` should be of type "title"
+  - Note that this applies to the entire documentation project. Documents referenced from `doc/source/index.rst` need to use lesser heading levels than the main document depending on where they are referenced from. For example, if a document is referenced from a `..toctree::` entry in `doc/source/index.rst`, its top level heading should be of type "subtitle"
+- **IMPORTANT** try to ensure that the length of the heading markers exactly matches the length of the heading text. Otherwise, Sphinx complains vociferously when building the documentation.
+
+## Project Documentation
+
+- The entrypoint for the documentation is `doc/source/index.rst`. It should include a table of contents for the documentation, broken into sections: General, Overview, API, and Runbook. The sections should be marked with the `.. toctree::` directive, like so:
+
+```rst
+.. toctree::
+    :maxdepth: 2
+    :caption: Contents:
+    :hidden:
+
+    general
+    overview
+    api
+    runbook
+```
+
+- The `..toctree::` entries should appear directly under the main title.
+- Add a quickstart section to the in `doc/source/overview/quickstart.rst` that tells the user how to quickly get moving using the tool.
+- Add a comprehensive installation guide to the in `doc/source/overview/installation.rst`. Include installing via `pip`, `uv tool`, `pipx`, and cloning the repo.
+- Add a comprehensive usage guide to the in `doc/source/overview/usage.rst`. Include the the full details of the commands and options.
+- Add a comprehensive usage guide to configuration in `doc/source/overview/configuration.rst`. Include the basic commands and options. If there is no configuration for this project, then just say that there is no configuration.
+- Add a comprehensive FAQ guide to the in `doc/source/overview/faq.rst`. Include the basic commands and options.
+- Update the contributing guide to the in `doc/source/runbook/contributing.rst`. Include how to set up your environment, to use pull requests, and to use atomic commits for each feature added or bug fixed. Largely keep the existing content, but add the new information. Include also a section on documenting your code and changes according to the above guidelines.
+- Find the copy of `coding_standards.rst` in a subfolder of a folder called `ai-coding` underneath the user's home directory. Add a copy of it to `doc/source/runbook/standards.rst`.
+- Add a comprehensive guide to testing in `doc/source/runbook/testing.rst`. Include how to run the tests, how to add tests according to the above guidelines, and how to run the tests.
+- Ensure all new .rst files are added to the `doc/source/index.rst` table of contents, in the appropriate section.
+- Add `autodoc` style documentation to the `doc/source/api` directory. This will automatically generate documentation for the public API of the project. Document all external facing code here, broken into modules logically: models, services, terraform, etc.

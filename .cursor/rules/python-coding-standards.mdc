@@ -1,0 +1,169 @@
+---
+description: General Python Coding Standards
+globs: ['*.py', 'test/', 'tests/']
+keywords: ['code', 'class', 'implement', 'function', 'method', 'write code', 'programming', 'packaging', 'python', 'pytest']
+alwaysApply: false
+---
+
+## Packaging
+
+- Use `uv` for package management.
+- The `uv` configuration is in `pyproject.toml`.
+- Use `uv sync --dev` to install the development dependencies.
+- Use `uv add <package>` to add a main dependency package to the project.
+- Use `uv add --group=test <package>` to add a testing dependency package to the project.
+
+## Using the virtual environment
+
+- If there is currently no `.venv` folder, create it using `uv sync --dev` the first time you work on a project.
+- Whenever you need to run a python command in the project, ensure you first activate the `.venv` with `source .venv/bin/activate`.
+
+## Coding Standards
+
+- Use python 3.10+ type hints for all functions and classes.
+- Implement proper separation of concerns. For example, do not put all your code in a single file or class. Put related code in the same file or class.
+- For example, this means do not use `Dict`, `List`, `Tuple`, `Type` or `Optional`; use `dict`, `list`, `tuple`, `type` or `<type> | None` instead. This is not an exhaustive list.
+- Be specific for collection types. Try not to use the plain `dict` or `list` types; use `dict[str, <subtype>]` or `list[<subtype>]` instead.
+- For complicated types, add a type alias to `<project>/types.py` and use that alias instead.
+- Try to limit the number of lines of code in a function or method to 60 lines. If it is longer, break it up into smaller functions if this is a function, or methods if this is a method.
+- Wrap your lines at 88 characters.
+- This include strings -- break them into multiple lines appropriately with python 3.10+ syntax.
+- in `try:` blocks, include specific exceptions that are expected to be raised; do not use a catch-all `except Exception` block unless you have no choice.
+- Always allow general `Exception` to be raised if it not expected to be raised.
+
+```toml
+[[tool.mypy.overrides]]
+module = "<module_name>.*"
+ignore_missing_imports = true
+```
+
+- Document all functions and classes using docstrings in Sphinx Napoleon format.
+- When documenting methods, put positional arguments in the `Args:` section, keyword arguments in the `Keyword Arguments:` section, include any exceptions raised in the `Raises:` section, and of course include a `Returns:` section. Leave a blank line after the `Returns:` section so `ruff` doesn't complain about the docstring.
+
+```python
+def my_function(arg1: str, arg2: int, kwarg1: str = "default", kwarg2: int = 10) -> str:
+    """
+    My function description
+
+    Args:
+        arg1: The first argument
+        arg2: The second argument
+
+    Keyword Arguments:
+        kwarg1: The first keyword argument
+        kwarg2: The second keyword argument
+
+    Raises:
+        ValueError: If kwarg1 is not 'foo' or 'bar'
+        ValueError: If kwarg2 is less than 0
+
+    Returns:
+        The result of the function
+
+    """
+    if kwarg1 not in ['foo', 'bar']:
+        raise ValueError("kwarg1 must be 'foo' or 'bar'")
+    if kwarg2 < 0:
+        raise ValueError("kwarg2 must be greater than 0")
+
+    return f"{arg1} {arg2}"
+```
+
+- To document class attributes, put the documentation on the lines above before the attribute, with each line beginning with `#:`. Do not list the class attributes in an `Attributes:` section of the class docstring.
+
+  ```python
+  from pydantic import BaseModel
+
+  class MyModel(BaseModel):
+    """"
+    My model description
+    """"
+
+    #: The person's name
+    name: str
+    #: The person's age
+    age: int
+    #: The person's email address
+    email: EmailStr | None = None
+  ```
+
+- Put any custom exceptions into a top-level `exc.py` module.
+
+- Put any type aliases we create into a top-level `types.py` module.
+
+- Try to avoid using basic dictionaries for any return value or method parameter that requrie simple key-value store type data. Use `@dataclass`, pydantic models, or `TypedDict` instead.
+
+- If the model is user facing (they will consume it in their own code, or we will consume it in other major sections of the code), use pydantic models. If the model is internal only, use `@dataclass` or `TypedDict`.
+
+**Not this:**
+
+```python
+def my_function(arg1: str, arg2: int, kwarg1: str = "default", kwarg2: int = 10) -> dict[str, str]:
+    return {
+        "arg1": arg1,
+        "arg2": arg2,
+    }
+```
+
+**Do this:**
+
+```python
+from pydantic import BaseModel, AnyUrl
+
+class Person(BaseModel):
+    """"
+    Describes an AWS service, e.g. ``ecs``
+    """"
+
+    #: The person's name
+    name: str
+    #: The person's age
+    age: int
+```
+
+**Or this:**
+
+```python
+from dataclasses import dataclass
+
+@dataclass
+class Person:
+    """"
+    Describes a person
+    """"
+
+    #: The person's name
+    name: str
+    #: The person's age
+    age: int
+```
+
+**Or this:**
+
+```python
+from typing import TypedDict
+
+class Person(TypedDict):
+    """"
+    Describes a person
+    """"
+
+    #: The person's name
+    name: str
+    #: The person's age
+    age: int
+```
+
+## Linting
+
+- Use `ruff` to lint the code, according to the settings in `pyproject.toml`. Try to fix the lint errors by either fixing the code or adding a `# noqa: <rule>` comment to the line.
+- Use `mypy` to type check the code, according to the settings in `pyproject.toml`. For any imported modules that lack type hints, add a section like this to the appropriate place in the `pyproject.toml` file:
+
+```toml
+[[tool.mypy.overrides]]
+module = "<module_name>.*"
+ignore_missing_imports = true
+```
+
+- While writing code, try to fix lint errors by either fixing the code or adding a `# noqa: <rule>` comment to the line. If you try more than 3 times to fix all the lint errors, pass and say tell the human to fix the lint errors after you have completed the code.
+- After you have completed implenting all code in the filesystem, run `ruff check --fix` to fix any easily fixable `ruff` errors.
