@@ -36,7 +36,7 @@ copyright: str = "2023, Caltech IMSS ADS"  # noqa: A001
 author: str = "Caltech IMSS ADS"
 
 # The full version, including alpha/beta/rc tags
-release: str = "2.6.1"
+release: str = "2.6.2"
 
 
 # -- General configuration ---------------------------------------------------

@@ -1,6 +1,6 @@
 [project]
 name = "nginx_ldap_auth_service"
-version = "2.6.1"
+version = "2.6.2"
 description = "A FastAPI app that authenticates users via LDAP and sets a cookie for nginx"
 readme = "README.md"
 requires-python = ">=3.11"
