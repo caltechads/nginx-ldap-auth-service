@@ -1,6 +1,21 @@
 CHANGELOG
 =========
 
+2.6.2 (2026-02-21)
+------------------
+
+Enhancements
+^^^^^^^^^^^^
+
+- Added the ``LDAP_VALIDATE_CERT`` setting.  If set to ``False``, the auth service will not validate the LDAP certificate.  Defaults to ``True``.
+, ``LDAP_CA_CERT_NAME`` and ``LDAP_CA_CERT_DIR`` settings.  If both are set, the auth service will use the CA certificate to validate the LDAP certificate.  Both setting default to ``None``.
+- updated all dependencies to the latest versions, for the Dockerhub image.
+
+Bugfixes
+^^^^^^^^
+
+- @semidark changed ``uvicorn`` startup to use the default TLS 1.2 protocol, a SSLv2 is deprecated.  This is a security enhancement.  This will affect you if you have a ``INSECURE`` set to ``False``.
+
 2.6.1 (2026-02-18)
 ------------------
 
