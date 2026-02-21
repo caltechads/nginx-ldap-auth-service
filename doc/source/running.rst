@@ -50,6 +50,14 @@ Deployments
 Docker sidecar container
 ^^^^^^^^^^^^^^^^^^^^^^^^
 
+.. important::
+
+    The ``docker-compose.yml`` file in the root of the repository is **for development only**.
+    It is not suitable for production deployment because it opens ports that would normally be
+    restricted so that we developers can test the service easily.
+
+    For production deployment, you should use a more secure configuration.
+
 The preferred way to run ``nginx_ldap_auth_service`` is as a Docker sidecar
 container.  This allows you to run ``nginx_ldap_auth_service`` alongside your
 nginx container, and have nginx talk to it when it needs to perform authentication

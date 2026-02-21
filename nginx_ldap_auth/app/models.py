@@ -41,9 +41,9 @@ class UserManager:
         client = bonsai.LDAPClient(
             cast("str", self.settings.ldap_uri), tls=self.settings.ldap_starttls
         )
-        client.set_cert_policy("never")
-        client.set_ca_cert(None)
-        client.set_ca_cert_dir(None)
+        client.set_cert_policy("try" if self.settings.ldap_validate_cert else "never")
+        client.set_ca_cert(self.settings.ldap_ca_cert_name)
+        client.set_ca_cert_dir(str(self.settings.ldap_ca_cert_dir))
         client.ignore_referrals = self.settings.ldap_disable_referrals
         client.set_server_chase_referrals(not self.settings.ldap_disable_referrals)
         client.set_async_connection_class(TimeLimitedAIOLDAPConnection)

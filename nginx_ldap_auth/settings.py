@@ -1,3 +1,4 @@
+from pathlib import Path
 from typing import Literal
 
 from pydantic import RedisDsn, ValidationError, model_validator
@@ -78,6 +79,13 @@ class Settings(BaseSettings):
     ldap_password: str
     #: Whether to use TLS when connecting to LDAP
     ldap_starttls: bool = True
+    #: Whether to validate the LDAP certificate
+    ldap_validate_cert: bool = True
+    #: The path to the CA certificate to use when validating the LDAP certificate
+    ldap_ca_cert_name: str | None = None
+    #: The path to the CA certificate directory to use when validating the LDAP
+    #: certificate
+    ldap_ca_cert_dir: Path | None = None
     #: Whether to disable LDAP referrals
     ldap_disable_referrals: bool = False
     #: The base DN under which to perform searches
@@ -246,4 +254,55 @@ class Settings(BaseSettings):
             ldap_username_attribute=self.ldap_username_attribute,
             ldap_full_name_attribute=self.ldap_full_name_attribute,
         )
+        return self
+
+    @model_validator(mode="after")  #: type: ignore
+    def ensure_ca_cert_cert(self):
+        """
+        Ensure that the CA certificate path is valid.
+
+        - If ldap_ca_cert_name is set, ldap_ca_cert_dir must be set
+        - If ldap_ca_cert_dir is set, ldap_ca_cert_name must be set
+        - ldap_ca_cert_dir must exist and be a directory
+        - ldap_ca_cert_name must exist in ldap_ca_cert_dir and be a file
+
+        Raises:
+            ValueError: ldap_ca_cert_dir does not exist
+            ValueError: ldap_ca_cert_dir is not a directory
+            ValueError: ldap_ca_cert_name does not exist in ldap_ca_cert_dir
+            ValueError: ldap_ca_cert_name is not a file
+
+        """
+        if self.ldap_ca_cert_name and not self.ldap_ca_cert_dir:
+            msg = "ldap_ca_cert_dir is required if ldap_ca_cert_name is set"
+            raise ValueError(msg)
+
+        if not self.ldap_ca_cert_name and self.ldap_ca_cert_dir:
+            msg = "ldap_ca_cert_name is required if ldap_ca_cert_dir is set"
+            raise ValueError(msg)
+
+        if not self.ldap_ca_cert_name and not self.ldap_ca_cert_dir:
+            return self
+
+        cert_dir = self.ldap_ca_cert_dir
+        cert_name = self.ldap_ca_cert_name
+        if cert_dir is None or cert_name is None:
+            msg = "ldap_ca_cert_dir and ldap_ca_cert_name must both be set"
+            raise ValueError(msg)
+
+        if not cert_dir.exists():
+            msg = "ldap_ca_cert_dir does not exist"
+            raise ValueError(msg)
+        if not cert_dir.is_dir():
+            msg = "ldap_ca_cert_dir is not a directory"
+            raise ValueError(msg)
+
+        cert_full_path = cert_dir / cert_name
+        if not cert_full_path.exists():
+            msg = "ldap_ca_cert_name does not exist in ldap_ca_cert_dir"
+            raise ValueError(msg)
+        if not cert_full_path.is_file():
+            msg = "ldap_ca_cert_name is not a file"
+            raise ValueError(msg)
+
         return self

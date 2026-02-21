@@ -1,5 +1,6 @@
 import os
 import pprint
+import ssl
 
 import click
 import uvicorn
@@ -102,10 +103,11 @@ def start(**kwargs):
     if not kwargs["insecure"]:
         # adding in SSL settings results in `uvicorn` running over HTTPS
         # the SSL settings will be ignored when insecure mode is enabled
-        # uvicorn uses modern TLS versions (TLS 1.2+) by default
+        # Use PROTOCOL_TLS_SERVER to ensure a modern TLS server context.
         ssl_kwargs = {
             "ssl_keyfile": kwargs["keyfile"],
             "ssl_certfile": kwargs["certfile"],
+            "ssl_version": ssl.PROTOCOL_TLS_SERVER,
         }
         uvicorn_kwargs |= ssl_kwargs
     if kwargs["env_file"]:

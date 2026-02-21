@@ -1,4 +1,6 @@
 import importlib
+import ssl
+from pathlib import Path
 from unittest.mock import patch
 
 from click.testing import CliRunner
@@ -169,3 +171,49 @@ def test_cli_start_secure(mock_run, tmp_path):
     kwargs = mock_run.call_args.kwargs
     assert kwargs["ssl_certfile"] == str(cert)
     assert kwargs["ssl_keyfile"] == str(key)
+
+
+def test_cli_start_secure_uses_tls12_plus_and_not_sslv2(monkeypatch):
+    """
+    Test secure startup uses a TLS server context (TLS 1.2+) and not SSLv2.
+    """
+    import nginx_ldap_auth.cli.server as server_module
+
+    monkeypatch.setenv("INSECURE", "False")
+    reloaded_server = importlib.reload(server_module)
+    try:
+        cert = (
+            Path(__file__).resolve().parents[1]
+            / "etc"
+            / "nginx"
+            / "certs"
+            / "localhost.crt"
+        )
+        key = (
+            Path(__file__).resolve().parents[1]
+            / "etc"
+            / "nginx"
+            / "certs"
+            / "localhost.key"
+        )
+        runner = CliRunner()
+        with patch("uvicorn.run") as mock_run:
+            result = runner.invoke(
+                reloaded_server.cli,
+                ["start", "--certfile", str(cert), "--keyfile", str(key)],
+            )
+
+        assert result.exit_code == 0
+        mock_run.assert_called_once()
+        kwargs = mock_run.call_args.kwargs
+
+        assert kwargs["ssl_version"] == ssl.PROTOCOL_TLS_SERVER
+        tls_context = ssl.SSLContext(kwargs["ssl_version"])
+        assert tls_context.minimum_version >= ssl.TLSVersion.TLSv1_2
+
+        sslv2 = getattr(ssl, "PROTOCOL_SSLv2", None)
+        if sslv2 is not None:
+            assert kwargs["ssl_version"] != sslv2
+    finally:
+        monkeypatch.delenv("INSECURE", raising=False)
+        importlib.reload(server_module)

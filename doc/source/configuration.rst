@@ -513,6 +513,18 @@ These settings configure the LDAP server to use for authentication.
 
     Set to ``0`` or ``False`` to disable STARTTLS on our LDAP connections. Defaults to ``True``.
 
+.. envvar:: LDAP_VALIDATE_CERT
+
+    Set to ``0`` or ``False`` to disable certificate validation on our LDAP connections. Defaults to ``True``.
+
+.. envvar:: LDAP_CA_CERT_NAME
+
+    The name of the CA certificate file to use for validating the LDAP certificate. Defaults to ``None``.
+
+.. envvar:: LDAP_CA_CERT_DIR
+
+    The path to the directory containing CA certificate to use for validating the LDAP certificate. Defaults to ``None``.
+
 .. envvar:: LDAP_DISABLE_REFERRALS
 
     Set to ``1`` or ``True`` to disable LDAP referrals. Defaults to ``False``.
