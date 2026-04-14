@@ -1,7 +1,7 @@
 from pathlib import Path
 from typing import Literal
 
-from pydantic import RedisDsn, ValidationError, model_validator
+from pydantic import RedisDsn, ValidationError, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 from nginx_ldap_auth.validators import validate_ldap_search_filter
@@ -117,11 +117,9 @@ class Settings(BaseSettings):
     #: used in the search filter as the placeholder for the username supplied by
     #: the user from the login form.
     ldap_get_user_filter: str = "{username_attribute}={username}"
-    #: The LDAP search filter to use to determine whether a user is authorized.  This
-    #: should a valid LDAP search filter. If this is ``None``, all users who can
-    #: successfully authenticate will be authorized.  If this is not ``None``,
-    #: the search with this filter must return at least one result for the user
-    #: to be authorized.
+    #: The LDAP search filter to use to determine whether a user is authorized.
+    #: This must be a valid LDAP search filter. The search with this filter must
+    #: return at least one result for the user to be authorized.
     #:
     #: You may use these replacement fields in the filter:
     #:
@@ -133,9 +131,9 @@ class Settings(BaseSettings):
     #: The ``{username}`` placeholder must be present in the filter, as it is
     #: used in the search filter as the placeholder for the username supplied by
     #: the user from the login form.
-    ldap_authorization_filter: str | None = None
+    ldap_authorization_filter: str
     #: Whether to allow the ``X-Authorization-Filter`` header to override
-    #: :py:attr:`ldap_authorization_filter`. When set to ``True`` (the default),
+    #: :py:attr:`ldap_authorization_filter`. When set to ``True``,
     #: the header value takes precedence over the environment variable setting.
     #:
     #: .. warning::
@@ -150,10 +148,6 @@ class Settings(BaseSettings):
     #:    NGINX configuration explicitly sets or clears the header using
     #:    ``proxy_set_header`` before forwarding requests.
     #:
-    #: .. note::
-    #:
-    #:    The default is ``True`` for backwards compatibility. Future versions
-    #:    may change the default to ``False`` for improved security.
     allow_authorization_filter_header: bool = True
     #: Number of seconds to wait for an LDAP connection to be established
     ldap_timeout: int = 15
@@ -177,6 +171,23 @@ class Settings(BaseSettings):
     duo_skey: str | None = None
 
     # ==================
+    # Header-Based Auth (Kerberos/SPNEGO)
+    # ==================
+
+    #: Enable the /check-header endpoint for stateless header-based authorization.
+    #: When enabled, this endpoint trusts the username from a header set by NGINX
+    #: after Kerberos/SPNEGO authentication and performs LDAP group authorization.
+    header_auth_enabled: bool = True
+    #: The header name containing the trusted username from Kerberos/SPNEGO
+    #: authentication. This header is set by NGINX after successful Kerberos
+    #: authentication and contains the value of $remote_user.
+    ldap_trusted_user_header: str = "X-Ldap-User"
+    #: TTL for authorization cache entries in seconds. Set to 0 to disable
+    #: caching. The cache stores the result of LDAP group membership checks
+    #: to reduce load on the LDAP server.
+    header_auth_cache_ttl: int = 300
+
+    # ==================
     # Sentry
     # ==================
     #: The sentry DSN to use for error reporting.  If this is ``None``, no
@@ -184,6 +195,15 @@ class Settings(BaseSettings):
     sentry_url: str | None = None
 
     model_config = SettingsConfigDict()
+
+    @field_validator("header_auth_cache_ttl")
+    @classmethod
+    def validate_cache_ttl(cls, v: int) -> int:
+        """Validate that header_auth_cache_ttl is non-negative."""
+        if v < 0:
+            msg = "header_auth_cache_ttl must be >= 0"
+            raise ValueError(msg)
+        return v
 
     @model_validator(mode="after")  #: type: ignore
     def redis_url_required_if_session_type_is_redis(self):
@@ -222,6 +242,23 @@ class Settings(BaseSettings):
         return self
 
     @model_validator(mode="after")  #: type: ignore
+    def ensure_authorization_filter_is_set(self):
+        """
+        Ensure that the authorization filter is configured.
+
+        Raises:
+            ValueError: The authorization filter is missing or empty
+
+        """
+        if (
+            not self.ldap_authorization_filter
+            or not self.ldap_authorization_filter.strip()
+        ):
+            msg = "ldap_authorization_filter is required"
+            raise ValueError(msg)
+        return self
+
+    @model_validator(mode="after")  #: type: ignore
     def ensure_authorization_filter_header_is_a_valid_ldap_filter(self):
         """
         Ensure that the authorization filter is a valid LDAP filter.
@@ -231,7 +268,7 @@ class Settings(BaseSettings):
             ValueError: The authorization filter does not use the {username} placeholder
 
         """
-        if self.allow_authorization_filter_header and self.ldap_authorization_filter:
+        if self.ldap_authorization_filter:
             validate_ldap_search_filter(
                 self.ldap_authorization_filter,
                 ldap_username_attribute=self.ldap_username_attribute,

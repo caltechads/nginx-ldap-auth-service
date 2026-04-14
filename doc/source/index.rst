@@ -56,6 +56,9 @@ User authorization
 
 - Users can be authorized to access resources based on an LDAP search filter
   you supply.
+- Supports Kerberos/SPNEGO authentication for Single Sign-On (SSO) environments.
+  NGINX handles Kerberos authentication while this service performs LDAP group
+  authorization. See :ref:`kerberos_spnego` for configuration details.
 
 Other features
 --------------

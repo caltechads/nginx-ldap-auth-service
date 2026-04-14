@@ -45,12 +45,12 @@ class LoginForm:
         * the user must exist in LDAP meaning that the user must be in the
           results of the ldap search
           named by :py:attr:`nginx_ldap_auth.settings.Settings.ldap_get_user_filter`
-        * If the ``X-Authorization-Filter`` header (when
+        * The user must match an effective LDAP authorization filter.
+        * If ``X-Authorization-Filter`` is present and
           :py:attr:`nginx_ldap_auth.settings.Settings.allow_authorization_filter_header`
-          is ``True``) or
-          :py:attr:`nginx_ldap_auth.settings.Settings.ldap_authorization_filter`
-          is not ``None``, the user must be in the results of that LDAP search.
-          The optional header will override the setting when allowed.
+          is ``True``, header value is used.
+        * Otherwise, the service uses
+          :py:attr:`nginx_ldap_auth.settings.Settings.ldap_authorization_filter`.
         * the bind to LDAP must be successful
 
         If all those tests pass, return ``True``.  Otherwise, return ``False``.
@@ -71,11 +71,22 @@ class LoginForm:
             user = cast("User", user)
             # Ensure that the user is authorized to access this service
             if settings.allow_authorization_filter_header:
-                ldap_authorization_filter: str | None = self.request.headers.get(
+                ldap_authorization_filter = self.request.headers.get(
                     "x-authorization-filter", settings.ldap_authorization_filter
                 )
             else:
                 ldap_authorization_filter = settings.ldap_authorization_filter
+            if not ldap_authorization_filter or not ldap_authorization_filter.strip():
+                self.errors.append("Service authorization is not configured.")
+                _logger.error(
+                    "auth.failed.missing_authorization_filter",
+                    username=self.username,
+                    target=self.service,
+                    allow_authorization_filter_header=settings.allow_authorization_filter_header,
+                    header_present="x-authorization-filter" in self.request.headers,
+                    settings_filter_present=bool(settings.ldap_authorization_filter),
+                )
+                return False
             if not await User.objects.is_authorized(
                 cast("str", self.username), ldap_authorization_filter
             ):

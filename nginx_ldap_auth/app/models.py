@@ -143,17 +143,16 @@ class UserManager:
         return await self.get(username) is not None
 
     async def is_authorized(
-        self, username: str, ldap_authorization_filter: str | None
+        self, username: str, ldap_authorization_filter: str
     ) -> bool:
         """
         Test whether the user is authorized to log in.  This is done by
         performing an LDAP search using the filter specified in a header or
         :py:class:`nginx_ldap_auth.settings.Settings.ldap_authorization_filter`.
-        If the value is ``None``, the user is considered authorized.
 
         Args:
             username: the username to check
-            ldap_authorization_filter: LDAP authorization filter (optional)
+            ldap_authorization_filter: LDAP authorization filter
 
         Raises:
             LDAPError: if an error occurred while communicating with the LDAP server
@@ -173,8 +172,9 @@ class UserManager:
             username=username,
             ldap_authorization_filter=ldap_authorization_filter,
         )
-        if ldap_authorization_filter is None:
-            return True
+        if not ldap_authorization_filter or not ldap_authorization_filter.strip():
+            msg = "ldap_authorization_filter must not be empty"
+            raise ValueError(msg)
         try:
             async with pool.spawn() as conn:
                 results = await conn.search(

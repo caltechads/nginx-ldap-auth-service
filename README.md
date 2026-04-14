@@ -12,6 +12,7 @@ It works in conjunction with nginx's [ngx_http_auth_request_module](http://nginx
 - **Duo MFA Support**: Optional Duo Multi-Factor Authentication workflow.
 - **Flexible Session Backends**: Support for in-memory or Redis-based sessions for high availability.
 - **Authorization Filters**: Restrict access based on LDAP search filters (e.g., group membership).
+- **Kerberos/SPNEGO Support**: Stateless header-based authorization for Single Sign-On environments where Nginx handles Kerberos authentication.
 - **Docker Ready**: Easily deployable as a sidecar container.
 - **Monitoring Endpoints**: Built-in `/status` and `/status/ldap` health checks.
 
@@ -87,8 +88,16 @@ The service can be configured via environment variables, command-line arguments,
 - `SESSION_BACKEND`: `memory` (default) or `redis`.
 - `LDAP_AUTHORIZATION_FILTER`: LDAP filter to restrict access.
 - `COOKIE_NAME`: Name of the session cookie (default: `nginxauth`).
+- `HEADER_AUTH_ENABLED`: Enable `/check-header` endpoint for Kerberos/SPNEGO (default: `True`).
+- `HEADER_AUTH_CACHE_TTL`: Cache TTL for header-based auth results in seconds (default: `300`).
 
 For a full list of configuration options, see the [Configuration Documentation](https://nginx-ldap-auth-service.readthedocs.io/en/latest/configuration.html).
+
+## Deployment (Podman Quadlet)
+
+For deployable runtime contract, security baseline, required environment variables,
+mounts, health checks, and customer-oriented Podman quadlet examples, see
+[`DEPLOYMENT.md`](DEPLOYMENT.md).
 
 ## Nginx Integration
 
@@ -130,6 +139,36 @@ location /check-auth {
 ```
 
 For detailed Nginx configuration examples, including caching and Duo MFA headers, see the [Nginx Configuration Guide](https://nginx-ldap-auth-service.readthedocs.io/en/latest/nginx.html).
+
+## Kerberos/SPNEGO Authentication
+
+For environments using Kerberos authentication (common in enterprise Active Directory setups), the service provides a stateless `/check-header` endpoint. Nginx handles Kerberos/SPNEGO authentication and passes the authenticated username via a trusted header for LDAP group authorization:
+
+```nginx
+location / {
+    auth_gss on;
+    auth_request /check-header-auth;
+    error_page 403 = @forbidden;
+    # ... your application config ...
+}
+
+location /check-header-auth {
+    internal;
+    proxy_pass http://nginx-ldap-auth-service:8888/check-header;
+    proxy_pass_request_headers off;
+    proxy_pass_request_body off;
+    proxy_set_header Content-Length "";
+    proxy_set_header X-Ldap-User $remote_user;
+    proxy_set_header X-Authorization-Filter "(&(sAMAccountName={username})(memberOf=cn=mygroup,ou=Groups,dc=example,dc=com))";
+}
+```
+
+This approach provides:
+- **Single Sign-On (SSO)**: Users authenticate automatically via Kerberos tickets
+- **Stateless Authorization**: No session cookies required
+- **High Performance**: Authorization results are cached (default: 5 minutes)
+
+See the [Kerberos/SPNEGO Configuration Guide](https://nginx-ldap-auth-service.readthedocs.io/en/latest/nginx.html#kerberos-spnego-authentication) for complete setup instructions.
 
 ## Documentation
 

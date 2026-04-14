@@ -4,7 +4,15 @@ Configuring nginx
 =================
 
 This page describes how to configure nginx to use ``nginx-ldap-auth-service`` to
-password protect your site using LDAP.
+protect your site using LDAP.
+
+There are two authentication modes supported:
+
+1. **Form-based authentication** (default) - Users are presented with a login form
+   and authenticate with username/password against LDAP.
+2. **Kerberos/SPNEGO authentication** - NGINX handles Kerberos authentication and
+   passes the authenticated username to the service for LDAP group authorization.
+   See :ref:`kerberos_spnego` for details.
 
 ngx_http_auth_request_module
 ----------------------------
@@ -148,3 +156,185 @@ Things to note:
       }
     }
 
+
+.. _kerberos_spnego:
+
+Kerberos/SPNEGO Authentication
+------------------------------
+
+If your environment uses Kerberos authentication (common in enterprise environments
+with Active Directory), you can configure NGINX to handle SPNEGO authentication
+while using ``nginx-ldap-auth-service`` for LDAP group-based authorization.
+
+This approach provides:
+
+- **Single Sign-On (SSO)**: Users authenticate automatically via their Kerberos tickets
+- **Stateless authorization**: No session cookies required for the authorization check
+- **Group-based access control**: Authorize users based on LDAP group membership
+- **High performance**: Authorization results are cached to reduce LDAP load
+
+Prerequisites
+~~~~~~~~~~~~~
+
+1. NGINX compiled with the ``ngx_http_auth_spnego_module`` or similar Kerberos module
+2. A valid Kerberos keytab file for your web service
+3. Users with valid Kerberos tickets (e.g., domain-joined workstations)
+
+How it works
+~~~~~~~~~~~~
+
+1. User requests a protected resource
+2. NGINX negotiates Kerberos authentication via SPNEGO
+3. On successful authentication, NGINX sets ``$remote_user`` to the authenticated principal
+4. NGINX calls ``/check-header`` on ``nginx-ldap-auth-service``, passing the username
+5. The service checks LDAP group membership and returns 200 (authorized) or 403 (forbidden)
+6. NGINX grants or denies access based on the response
+
+NGINX Configuration
+~~~~~~~~~~~~~~~~~~~
+
+Below is a complete example configuration for Kerberos/SPNEGO authentication with
+LDAP group authorization.
+
+.. important::
+
+    **Security**: The ``X-Ldap-User`` header must be set by NGINX, not passed through
+    from the client. The configuration below uses ``proxy_pass_request_headers off``
+    to prevent header spoofing.
+
+.. code-block:: nginx
+
+    user nginx;
+    worker_processes auto;
+
+    error_log  /dev/stderr info;
+    pid /tmp/nginx.pid;
+
+    events {
+      worker_connections 1024;
+    }
+
+    http {
+      include /etc/nginx/mime.types;
+      default_type application/octet-stream;
+
+      server {
+        listen 443 ssl;
+        http2 on;
+
+        ssl_certificate /certs/localhost.crt;
+        ssl_certificate_key /certs/localhost.key;
+
+        # Kerberos authentication settings
+        auth_gss on;
+        auth_gss_keytab /etc/krb5.keytab;
+        auth_gss_realm EXAMPLE.COM;
+        auth_gss_service_name HTTP;
+
+        location / {
+            # Require Kerberos authentication
+            auth_gss on;
+
+            # Use auth_request to check LDAP group membership
+            auth_request /check-header-auth;
+
+            # Pass the authenticated user to the backend application
+            auth_request_set $auth_user $upstream_http_x_auth_user;
+            proxy_set_header X-Authenticated-User $auth_user;
+
+            root /usr/share/nginx/html;
+            index index.html index.htm;
+
+            # Return 403 if authorization fails (user not in required group)
+            error_page 403 = @forbidden;
+        }
+
+        location @forbidden {
+            return 403 "Access denied: You are not authorized to access this resource.";
+        }
+
+        location /check-header-auth {
+            internal;
+            proxy_pass https://nginx_ldap_auth_service:8888/check-header;
+
+            # IMPORTANT: Do not pass client headers to prevent spoofing
+            proxy_pass_request_headers off;
+            proxy_pass_request_body off;
+            proxy_set_header Content-Length "";
+
+            # Pass the Kerberos-authenticated username
+            # $remote_user is set by auth_gss after successful authentication
+            proxy_set_header X-Ldap-User $remote_user;
+
+            # Optional: Specify LDAP authorization filter
+            # Users must be members of the "web-users" group
+            proxy_set_header X-Authorization-Filter "(&(sAMAccountName={username})(memberOf=cn=web-users,ou=Groups,dc=example,dc=com))";
+
+            # Prevent caching in NGINX (the service has its own cache)
+            proxy_no_cache 1;
+            proxy_cache_bypass 1;
+        }
+      }
+    }
+
+Configuration Notes
+~~~~~~~~~~~~~~~~~~~
+
+X-Ldap-User Header
+
+    The header containing the authenticated username. By default, this is
+    ``X-Ldap-User``, but you can change it with the :envvar:`LDAP_TRUSTED_USER_HEADER`
+    environment variable.
+
+    .. code-block:: nginx
+
+        # Extract just the username from user@REALM format
+        map $remote_user $kerberos_user {
+            ~^(?<user>[^@]+)@  $user;
+            default            $remote_user;
+        }
+
+        location /check-header-auth {
+            # ...
+            proxy_set_header X-Ldap-User $kerberos_user;
+        }
+
+X-Authorization-Filter Header
+
+    The LDAP filter used to determine authorization. If not specified, the service
+    uses the :envvar:`LDAP_AUTHORIZATION_FILTER` environment variable.
+
+    .. code-block:: nginx
+
+        # Different filters for different locations
+        location /admin {
+            auth_request /check-header-auth-admin;
+            # ...
+        }
+
+        location /check-header-auth-admin {
+            internal;
+            proxy_pass https://nginx_ldap_auth_service:8888/check-header;
+            proxy_set_header X-Ldap-User $remote_user;
+            proxy_set_header X-Authorization-Filter "(&(sAMAccountName={username})(memberOf=cn=admins,ou=Groups,dc=example,dc=com))";
+            # ...
+        }
+
+Response Codes
+
+    The ``/check-header`` endpoint returns:
+
+    - **200 OK**: User is authorized (also sets ``X-Auth-User`` response header)
+    - **401 Unauthorized**: Missing username header (Kerberos auth failed upstream)
+    - **403 Forbidden**: User exists but is not in the required LDAP group
+    - **500 Internal Server Error**: LDAP connection error
+
+Caching Behavior
+
+    The service includes a built-in authorization cache (default TTL: 5 minutes)
+    to reduce LDAP load. You can configure this with:
+
+    - :envvar:`HEADER_AUTH_CACHE_TTL`: Cache duration in seconds (0 to disable)
+
+    The cache is keyed by username + authorization filter hash, so different
+    filters result in separate cache entries.
