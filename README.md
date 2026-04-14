@@ -93,6 +93,12 @@ The service can be configured via environment variables, command-line arguments,
 
 For a full list of configuration options, see the [Configuration Documentation](https://nginx-ldap-auth-service.readthedocs.io/en/latest/configuration.html).
 
+## Deployment (Podman Quadlet)
+
+For deployable runtime contract, security baseline, required environment variables,
+mounts, health checks, and customer-oriented Podman quadlet examples, see
+[`DEPLOYMENT.md`](DEPLOYMENT.md).
+
 ## Nginx Integration
 
 To use the service with Nginx, configure your `location` blocks to use `auth_request`:
