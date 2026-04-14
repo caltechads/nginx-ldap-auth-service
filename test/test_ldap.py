@@ -100,9 +100,9 @@ async def test_user_manager_is_authorized(mocker):
     assert result is True
     mock_conn.search.assert_called()
 
-    # Test without filter
-    result = await manager.is_authorized("testuser", None)
-    assert result is True
+    # Test without filter should fail
+    with pytest.raises((AttributeError, ValueError)):
+        await manager.is_authorized("testuser", None)
 
 
 @pytest.mark.asyncio

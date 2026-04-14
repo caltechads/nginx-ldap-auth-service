@@ -1,5 +1,6 @@
 import pytest
 from pydantic import ValidationError
+
 from nginx_ldap_auth.settings import Settings
 
 

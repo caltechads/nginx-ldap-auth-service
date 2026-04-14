@@ -11,6 +11,7 @@ def _parse_ldap_search_filter(
 
     Raises:
         ValueError: The LDAP search filter is not a valid LDAP filter
+
     """
     try:
         # Filters can have placeholders for various values, so we need to

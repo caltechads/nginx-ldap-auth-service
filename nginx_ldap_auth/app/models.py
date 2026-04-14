@@ -172,7 +172,7 @@ class UserManager:
             username=username,
             ldap_authorization_filter=ldap_authorization_filter,
         )
-        if not ldap_authorization_filter.strip():
+        if not ldap_authorization_filter or not ldap_authorization_filter.strip():
             msg = "ldap_authorization_filter must not be empty"
             raise ValueError(msg)
         try:

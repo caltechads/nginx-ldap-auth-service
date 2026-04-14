@@ -39,7 +39,8 @@ _REDIS_LOCK_TTL = 10
 
 
 def _make_cache_key(username: str, authorization_filter: str | None) -> str:
-    """Generate cache key from username and filter hash.
+    """
+    Generate cache key from username and filter hash.
 
     :param username: Username used for the cache key.
     :param authorization_filter: LDAP authorization filter to hash, if present.
@@ -84,7 +85,8 @@ def _get_redis_connection():
 
 
 def ensure_redis_connection() -> None:
-    """Ensure Redis connection is available when configured.
+    """
+    Ensure Redis connection is available when configured.
 
     :raises RuntimeError: Redis backend configured but connection unavailable.
     """
@@ -244,7 +246,8 @@ def _memory_set(key: str, authorized: bool, ttl: int) -> None:  # noqa: FBT001
 
 
 async def _redis_get(key: str) -> bool | None:
-    """Get cached authorization result from Redis.
+    """
+    Get cached authorization result from Redis.
 
     :param key: Cache key to retrieve.
     :returns: Cached authorization result or ``None``.
@@ -267,7 +270,8 @@ async def _redis_get(key: str) -> bool | None:
 
 
 async def _redis_set(key: str, authorized: bool, ttl: int) -> None:  # noqa: FBT001
-    """Set cached authorization result in Redis.
+    """
+    Set cached authorization result in Redis.
 
     :param key: Cache key to set.
     :param authorized: Authorization result to cache.
@@ -330,7 +334,8 @@ async def _redis_lock(key: str) -> AsyncGenerator[None, None]:
                 # - PRO: Prevents indefinite blocking during Redis issues
                 # - PRO: Service stays available under high contention
                 # - CON: May cause duplicate LDAP queries (thundering herd)
-                # - SAFETY: Fail-safe - more restrictive auth result wins via cache expiration
+                # - SAFETY: Fail-safe - more restrictive auth result wins
+                #   via cache expiration
                 logger.warning("cache.lock.timeout", key=lock_key)
                 break
 

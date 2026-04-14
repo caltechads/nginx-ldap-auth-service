@@ -83,7 +83,9 @@ def test_check_with_authorization_filter_header(
     response = client.get(
         "/check",
         headers={
-            "x-authorization-filter": "(&(group=admin)({username_attribute}={username}))"
+            "x-authorization-filter": (
+                "(&(group=admin)({username_attribute}={username}))"
+            )
         },
         cookies={"nginxauth": cookie},
     )
@@ -228,8 +230,8 @@ def test_check_invalid_authorization_filter_header(client, mock_user_manager):
     cookie = login_response.cookies.get("nginxauth")
 
     # 2. Call /check with an invalid filter header
-    # This should raise a ValueError in the app, which FastAPI 
-    # will catch and return as a 500 Internal Server Error by default 
+    # This should raise a ValueError in the app, which FastAPI
+    # will catch and return as a 500 Internal Server Error by default
     # if not explicitly handled.
     try:
         response = client.get(
