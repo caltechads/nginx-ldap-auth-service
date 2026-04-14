@@ -65,15 +65,20 @@ class TestCheckHeaderEndpoint:
         assert response.status_code == 403
         assert "x-auth-user" not in response.headers
 
-    def test_check_header_no_filter(self, client, mock_user_manager):
-        """Test that with no authorization filter, all users are authorized."""
+    def test_check_header_no_filter_returns_500(
+        self, client, mock_user_manager, mocker
+    ):
+        """Test that missing effective authorization filter returns 500."""
+        from nginx_ldap_auth.app import header_auth
+
+        mocker.patch.object(header_auth.settings, "ldap_authorization_filter", None)
         response = client.get(
             "/check-header",
             headers={"x-ldap-user": "testuser"},
         )
 
-        assert response.status_code == 200
-        assert response.headers.get("x-auth-user") == "testuser"
+        assert response.status_code == 500
+        assert response.headers.get("x-auth-user") is None
         mock_user_manager.is_authorized.assert_not_called()
 
     def test_check_header_ldap_error(self, client, mock_user_manager):
@@ -145,6 +150,11 @@ class TestCheckHeaderEndpoint:
 
         mocker.patch.object(
             header_auth.settings, "ldap_trusted_user_header", "X-Remote-User"
+        )
+        mocker.patch.object(
+            header_auth.settings,
+            "ldap_authorization_filter",
+            "(&(uid={username})(memberOf=cn=default,dc=example,dc=com))",
         )
 
         response = client.get(

@@ -302,8 +302,7 @@ X-Ldap-User Header
 X-Authorization-Filter Header
 
     The LDAP filter used to determine authorization. If not specified, the service
-    uses the :envvar:`LDAP_AUTHORIZATION_FILTER` environment variable. If neither
-    is set, all authenticated users are authorized.
+    uses the :envvar:`LDAP_AUTHORIZATION_FILTER` environment variable.
 
     .. code-block:: nginx
 
@@ -339,4 +338,3 @@ Caching Behavior
 
     The cache is keyed by username + authorization filter hash, so different
     filters result in separate cache entries.
-

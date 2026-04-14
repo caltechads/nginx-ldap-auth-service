@@ -581,8 +581,8 @@ These settings configure the LDAP server to use for authentication.
 .. envvar:: LDAP_AUTHORIZATION_FILTER
 
     The LDAP search filter to use when determining if a user is authorized to login.
-    for authorizations. Defaults to no filter, meaning all users are authorized if
-    they exist in LDAP. See :py:attr:`nginx_ldap_auth.settings.Settings.ldap_authorization_filter` for more details.
+    This setting is required. See :py:attr:`nginx_ldap_auth.settings.Settings.ldap_authorization_filter`
+    for more details.
 
     The filter will within the base DN given by :envvar:`LDAP_BASEDN` and with
     scope of ``SUBTREE``.
@@ -590,8 +590,7 @@ These settings configure the LDAP server to use for authentication.
 .. envvar:: ALLOW_AUTHORIZATION_FILTER_HEADER
 
     Whether to allow the ``X-Authorization-Filter`` HTTP header to override
-    :envvar:`LDAP_AUTHORIZATION_FILTER`. Defaults to ``True`` for backwards
-    compatibility.
+    :envvar:`LDAP_AUTHORIZATION_FILTER`.
 
     .. warning::
 
@@ -604,11 +603,6 @@ These settings configure the LDAP server to use for authentication.
         :envvar:`LDAP_AUTHORIZATION_FILTER` environment variable, or ensure your
         NGINX configuration explicitly sets or clears the header using
         ``proxy_set_header`` before forwarding requests.
-
-    .. note::
-
-        The default is ``True`` for backwards compatibility. Future versions
-        may change the default to ``False`` for improved security.
 
     See :py:attr:`nginx_ldap_auth.settings.Settings.allow_authorization_filter_header`
     for more details.

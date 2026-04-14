@@ -608,13 +608,12 @@ async def check_auth(request: Request, response: Response) -> dict[str, Any]:
 
     The user is authorized if the cookie exists, the session the cookie refers
     to exists, and the ``username`` key in the settings is set.  Additionally,
-    the user must still exist in LDAP, and if
-    the ``X-Authorization-Filter`` header (when
+    the user must still exist in LDAP and match an effective authorization
+    filter. If ``X-Authorization-Filter`` is present and
     :py:attr:`nginx_ldap_auth.settings.Settings.allow_authorization_filter_header`
-    is ``True``) or
+    is ``True``, the header value is used. Otherwise,
     :py:attr:`nginx_ldap_auth.settings.Settings.ldap_authorization_filter` is
-    not ``None``, the user must also match the filter.
-    The optional header will override the setting when allowed.
+    used.
 
     Side Effects:
         If the user is not authorized, the session is destroyed, and the user is
@@ -652,7 +651,7 @@ async def check_auth(request: Request, response: Response) -> dict[str, Any]:
                 response.status_code = status.HTTP_401_UNAUTHORIZED
                 return {}
             if settings.allow_authorization_filter_header:
-                ldap_authorization_filter: str | None = request.headers.get(
+                ldap_authorization_filter = request.headers.get(
                     "x-authorization-filter", settings.ldap_authorization_filter
                 )
                 if ldap_authorization_filter:
@@ -669,6 +668,16 @@ async def check_auth(request: Request, response: Response) -> dict[str, Any]:
                         raise
             else:
                 ldap_authorization_filter = settings.ldap_authorization_filter
+            if not ldap_authorization_filter or not ldap_authorization_filter.strip():
+                _logger.error(
+                    "auth.check.missing_authorization_filter",
+                    username=request.session["username"],
+                    allow_authorization_filter_header=settings.allow_authorization_filter_header,
+                    header_present="x-authorization-filter" in request.headers,
+                    settings_filter_present=bool(settings.ldap_authorization_filter),
+                )
+                response.status_code = status.HTTP_500_INTERNAL_SERVER_ERROR
+                return {}
             if not await User.objects.is_authorized(
                 request.session["username"], ldap_authorization_filter
             ):

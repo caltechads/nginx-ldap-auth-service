@@ -10,6 +10,7 @@ def make_settings(**kwargs):
         "ldap_binddn": "cn=admin",
         "ldap_password": "password",
         "ldap_basedn": "dc=example,dc=com",
+        "ldap_authorization_filter": "({username_attribute}={username})",
     }
     return Settings(**(base_kwargs | kwargs))
 
@@ -24,7 +25,10 @@ def test_settings_get_user_filter_validation():
     # Invalid filter
     with pytest.raises(ValidationError) as excinfo:
         make_settings(ldap_get_user_filter="(invalid")
-    assert "ldap_get_user_filter" in str(excinfo.value) or "ldap_authorization_filter" in str(excinfo.value)
+    assert "ldap_get_user_filter" in str(
+        excinfo.value
+    ) or "ldap_authorization_filter" in str(excinfo.value)
+
 
 def test_settings_authorization_filter_validation():
     """
@@ -43,12 +47,13 @@ def test_settings_authorization_filter_validation():
     assert "does not use the {username} placeholder" in str(excinfo.value)
 
 
-def test_settings_authorization_filter_none_allowed():
+def test_settings_authorization_filter_none_not_allowed():
     """
-    Test that ldap_authorization_filter can be None.
+    Test that ldap_authorization_filter cannot be None.
     """
-    settings = make_settings(ldap_authorization_filter=None)
-    assert settings.ldap_authorization_filter is None
+    with pytest.raises(ValidationError) as excinfo:
+        make_settings(ldap_authorization_filter=None)
+    assert "ldap_authorization_filter" in str(excinfo.value)
 
 
 def test_settings_ca_cert_is_optional_by_default():
@@ -66,7 +71,9 @@ def test_settings_ca_cert_name_requires_dir():
     """
     with pytest.raises(ValidationError) as excinfo:
         make_settings(ldap_ca_cert_name="ca.pem")
-    assert "ldap_ca_cert_dir is required if ldap_ca_cert_name is set" in str(excinfo.value)
+    assert "ldap_ca_cert_dir is required if ldap_ca_cert_name is set" in str(
+        excinfo.value
+    )
 
 
 def test_settings_ca_cert_dir_requires_name(tmp_path):
@@ -77,7 +84,9 @@ def test_settings_ca_cert_dir_requires_name(tmp_path):
     cert_dir.mkdir()
     with pytest.raises(ValidationError) as excinfo:
         make_settings(ldap_ca_cert_dir=cert_dir)
-    assert "ldap_ca_cert_name is required if ldap_ca_cert_dir is set" in str(excinfo.value)
+    assert "ldap_ca_cert_name is required if ldap_ca_cert_dir is set" in str(
+        excinfo.value
+    )
 
 
 def test_settings_ca_cert_dir_and_file_must_exist(tmp_path):

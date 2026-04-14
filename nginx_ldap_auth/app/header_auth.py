@@ -59,16 +59,21 @@ async def check_header_auth(  # noqa: PLR0911
 
     # Get authorization filter from header or settings
     if settings.allow_authorization_filter_header:
-        ldap_authorization_filter: str | None = request.headers.get(
+        ldap_authorization_filter = request.headers.get(
             "x-authorization-filter", settings.ldap_authorization_filter
         )
     else:
         ldap_authorization_filter = settings.ldap_authorization_filter
 
-    # No filter means all authenticated users are authorized
-    if ldap_authorization_filter is None:
-        _logger.info("header_auth.check.success.no_filter", username=username)
-        response.headers["X-Auth-User"] = username
+    if not ldap_authorization_filter or not ldap_authorization_filter.strip():
+        _logger.error(
+            "header_auth.check.missing_authorization_filter",
+            username=username,
+            allow_authorization_filter_header=settings.allow_authorization_filter_header,
+            header_present="x-authorization-filter" in request.headers,
+            settings_filter_present=bool(settings.ldap_authorization_filter),
+        )
+        response.status_code = status.HTTP_500_INTERNAL_SERVER_ERROR
         return {}
 
     # Use distributed lock to prevent thundering herd on LDAP
